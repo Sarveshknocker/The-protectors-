@@ -1,0 +1,28 @@
+# ---- secrets (The Protectors) ----
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.ppk
+id_rsa*
+id_ed25519*
+*.tfvars
+!*.tfvars.example
+*.tfstate
+*.tfstate.*
+.terraform/
+credentials.json
+service-account*.json
+google-services.json.bak
+secrets/
+.aws/
+# .npmrc / .pypirc: ignore only if they contain auth tokens
+# ---- local reports that may contain paths/snippets ----
+.protectors/*.json
+.protectors/*.sarif

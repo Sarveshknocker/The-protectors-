@@ -1,0 +1,40 @@
+# ESP-IDF production security fragment (IDF v5.x). Use as sdkconfig.defaults.prod:
+#   idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.prod" build
+# Option names follow IDF v5.x Kconfig — confirm each in `idf.py menuconfig` for your IDF version and chip.
+# WARNING: Secure Boot and Release-mode flash encryption burn eFuses permanently.
+# Test the full flow on sacrificial boards first and keep signing keys offline (HSM / remote signing).
+
+# --- Secure boot v2 (signed bootloader + app) ---
+CONFIG_SECURE_BOOT=y
+CONFIG_SECURE_BOOT_V2_ENABLED=y
+CONFIG_SECURE_SIGNED_APPS_NO_SECURE_BOOT=n
+CONFIG_SECURE_BOOT_BUILD_SIGNED_BINARIES=n
+# ^ sign in CI/HSM with espsecure.py sign_data instead of keeping the key in the build tree
+
+# --- Flash + NVS encryption ---
+CONFIG_SECURE_FLASH_ENC_ENABLED=y
+CONFIG_SECURE_FLASH_ENCRYPTION_MODE_RELEASE=y
+CONFIG_NVS_ENCRYPTION=y
+
+# --- Lock debug/download paths ---
+CONFIG_SECURE_ENABLE_SECURE_ROM_DL_MODE=y
+# ^ or CONFIG_SECURE_DISABLE_ROM_DL_MODE=y to remove the ROM download mode entirely
+CONFIG_SECURE_BOOT_ALLOW_JTAG=n
+CONFIG_SECURE_FLASH_UART_BOOTLOADER_ALLOW_ENC=n
+CONFIG_ESP_CONSOLE_NONE=y
+
+# --- Anti-rollback + safe OTA ---
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
+CONFIG_BOOTLOADER_APP_ANTI_ROLLBACK=y
+CONFIG_ESP_HTTPS_OTA_ALLOW_HTTP=n
+
+# --- TLS ---
+CONFIG_ESP_TLS_INSECURE=n
+CONFIG_MBEDTLS_CERTIFICATE_BUNDLE=y
+CONFIG_MBEDTLS_SSL_PROTO_TLS1_3=y
+
+# --- Hardening / diagnostics ---
+CONFIG_COMPILER_STACK_CHECK_MODE_STRONG=y
+CONFIG_ESP_TASK_WDT_EN=y
+CONFIG_BOOTLOADER_LOG_LEVEL_NONE=y
+CONFIG_LOG_DEFAULT_LEVEL_WARN=y

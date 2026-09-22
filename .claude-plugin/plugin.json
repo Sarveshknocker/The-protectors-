@@ -1,0 +1,7 @@
+{
+  "name": "the-protectors",
+  "version": "0.1.0",
+  "description": "Autonomous cybersecurity verification team: identifies the project type, analyses every file, builds a tailored defense system and delivers a verified security report.",
+  "author": { "name": "Sarvesh", "url": "https://github.com/Sarveshknocker" },
+  "keywords": ["security", "appsec", "devsecops", "owasp", "sast", "hardening"]
+}

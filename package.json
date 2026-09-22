@@ -1,0 +1,15 @@
+{
+  "name": "the-protectors",
+  "version": "0.1.0",
+  "repository": "github:Sarveshknocker/The-protectors-",
+  "description": "Autonomous cybersecurity verification team for any AI coding assistant: identifies your project type, analyses every file, and builds a tailored defense system with a verified security report.",
+  "type": "module",
+  "bin": {
+    "protectors": "bin/protectors.mjs"
+  },
+  "files": ["bin", "skills", "agents", "adapters", ".claude-plugin", "README.md", "LICENSE"],
+  "engines": { "node": ">=18" },
+  "scripts": { "test": "node tests/run.mjs" },
+  "keywords": ["security", "appsec", "sast", "devsecops", "owasp", "ai-agents", "agents-md", "claude-code", "cursor", "copilot", "codex"],
+  "license": "MIT"
+}

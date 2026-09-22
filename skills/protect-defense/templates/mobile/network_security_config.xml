@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/xml/network_security_config.xml
+     AndroidManifest.xml <application
+         android:networkSecurityConfig="@xml/network_security_config"
+         android:usesCleartextTraffic="false"
+         android:allowBackup="false" ...>
+-->
+<network-security-config>
+    <!-- HTTPS only, system CAs only (user-installed CAs are NOT trusted in release). -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Optional public-key pinning for your API. Always include a BACKUP pin and an expiration,
+         and plan rotation before the certificate/key changes, or the app will stop connecting.
+         Generate a pin: openssl s_client -connect api.example.com:443 | openssl x509 -pubkey -noout |
+           openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64 -->
+    <!--
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">api.example.com</domain>
+        <pin-set expiration="2027-06-30">
+            <pin digest="SHA-256">PRIMARY_SPKI_HASH_BASE64=</pin>
+            <pin digest="SHA-256">BACKUP_SPKI_HASH_BASE64=</pin>
+        </pin-set>
+    </domain-config>
+    -->
+
+    <!-- Debug builds only: allow user CAs for local proxy debugging. -->
+    <debug-overrides>
+        <trust-anchors>
+            <certificates src="user" />
+        </trust-anchors>
+    </debug-overrides>
+</network-security-config>

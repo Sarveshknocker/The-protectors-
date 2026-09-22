@@ -1,0 +1,11 @@
+{
+  "name": "the-protectors",
+  "owner": { "name": "Sarvesh" },
+  "plugins": [
+    {
+      "name": "the-protectors",
+      "source": "./",
+      "description": "Autonomous cybersecurity verification and hardening for any project type."
+    }
+  ]
+}

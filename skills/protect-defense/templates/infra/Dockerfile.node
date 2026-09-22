@@ -1,0 +1,31 @@
+# syntax=docker/dockerfile:1.7
+# Hardened multi-stage image for a Node service. Pin the base by digest in production:
+#   docker buildx imagetools inspect node:22-alpine  → use node:22-alpine@sha256:<digest>
+
+FROM node:22-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+# Reproducible install; no lifecycle scripts from dependencies at this stage.
+RUN npm ci --omit=dev --ignore-scripts
+
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+# Build-time secrets via BuildKit (never ARG/ENV):  RUN --mount=type=secret,id=npmrc,target=/root/.npmrc npm ci
+RUN npm run build
+
+FROM node:22-alpine AS runtime
+ENV NODE_ENV=production
+WORKDIR /app
+RUN apk add --no-cache tini && addgroup -S app && adduser -S app -G app
+COPY --from=deps --chown=app:app /app/node_modules ./node_modules
+COPY --from=build --chown=app:app /app/dist ./dist
+COPY --chown=app:app package.json ./
+USER app
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 CMD wget -qO- http://127.0.0.1:3000/healthz || exit 1
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["node", "dist/server.js"]
+# Run with: docker run --read-only --tmpfs /tmp --cap-drop=ALL --security-opt=no-new-privileges ...

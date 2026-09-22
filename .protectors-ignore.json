@@ -1,0 +1,4 @@
+[
+  { "rule": "*", "path": "skills/protect-scan/scripts/rules.mjs", "reason": "Rule catalogue: contains the dangerous patterns as regular expressions, not executable code." },
+  { "rule": "*", "path": "tests/", "reason": "Deliberately vulnerable fixture projects used to test the scanner; generated in temp dirs at runtime." }
+]
