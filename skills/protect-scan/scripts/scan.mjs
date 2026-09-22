@@ -21,14 +21,19 @@ const IGNORE_DIRS = new Set(['node_modules', '.git', 'dist', 'build', 'out', '.n
 const SKIP_FILES = /(^|\/)(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lockb?|poetry\.lock|Pipfile\.lock|uv\.lock|Cargo\.lock|go\.sum|composer\.lock|Gemfile\.lock|pubspec\.lock)$|\.min\.(js|css)$|\.map$|\.(png|jpe?g|gif|webp|avif|ico|svgz|pdf|zip|gz|tgz|jar|war|class|so|dll|dylib|exe|bin|woff2?|ttf|otf|eot|mp[34]|webm|mov|glb|gltf|hdr|exr|ktx2|wasm|lockb|db|sqlite)$/i;
 const TEST_PATH = /(^|\/)(__tests__|__mocks__|tests?|spec|specs|fixtures?|examples?|samples?|docs?|e2e|cypress|playwright|stories)\/|\.(test|spec|stories)\.\w+$|_test\.(go|py)$/i;
 
+// The kit's own installed copies (Claude Code adapter) contain rule regexes and must not be scanned.
+const KIT_COPY = /^\.claude\/(skills\/protect(-[\w-]+)?|agents\/(recon-analyst|security-reviewer|hardening-engineer|verification-auditor)\.md)(\/|$)/;
+
 function walk(dir, acc = []) {
   let entries;
   try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return acc; }
   for (const e of entries) {
     if (IGNORE_DIRS.has(e.name) || e.isSymbolicLink()) continue;
     const full = path.join(dir, e.name);
+    const rel = path.relative(root, full).split(path.sep).join('/');
+    if (KIT_COPY.test(rel)) continue;
     if (e.isDirectory()) walk(full, acc);
-    else acc.push(path.relative(root, full).split(path.sep).join('/'));
+    else acc.push(rel);
   }
   return acc;
 }

@@ -321,6 +321,17 @@ test('init → update → remove round-trip keeps user content intact', () => {
   assert.ok(fs.existsSync(path.join(dir, '.protectors/SECURITY_REPORT.md')));
 });
 
+test('Installed kit (all adapters) never scans its own copies; user .claude files still scanned', () => {
+  const dir = fixture({ 'package.json': '{}', 'index.html': '<html></html>', '.claude/hooks/run.js': 'eval(userInput);' });
+  cli(['init', dir]);
+  const s = scan(dir);
+  const kitHits = s.findings.filter((f) => /^\.claude\/(skills|agents)\/|^\.protectors-kit\//.test(f.file));
+  assert.equal(kitHits.length, 0, JSON.stringify(kitHits.slice(0, 3), null, 1));
+  assert.ok(s.findings.some((f) => f.file === '.claude/hooks/run.js' && f.rule === 'inj.eval'), 'user-owned .claude files must still be scanned');
+  const r = recon(dir);
+  assert.ok(!r.inventory.some((f) => f.file.startsWith('.claude/skills/protect')));
+});
+
 test('Installed kit scripts run from inside the target project', () => {
   const dir = fixture({ 'package.json': '{}', 'index.html': '<html></html>' });
   cli(['init', dir, '--tools', 'agents']);

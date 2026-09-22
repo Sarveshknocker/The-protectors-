@@ -27,6 +27,7 @@ function walk(dir, acc) {
     const full = path.join(dir, e.name);
     const rel = path.relative(root, full).split(path.sep).join('/');
     if (IGNORE_DIRS.has(e.name) || IGNORE_DIRS.has(rel)) continue;
+    if (/^\.claude\/(skills\/protect(-[\w-]+)?|agents\/(recon-analyst|security-reviewer|hardening-engineer|verification-auditor)\.md)(\/|$)/.test(rel)) continue; // kit's own copies
     if (e.isSymbolicLink()) continue;
     if (e.isDirectory()) walk(full, acc);
     else {
