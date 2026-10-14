@@ -6,7 +6,8 @@ This project has **The Protectors** security kit installed at `{{KIT}}/`. Works 
 |---|---|
 | Full autonomous verification + hardening (end to end) | `{{KIT}}/skills/protect/SKILL.md` |
 | Identify project type & attack surface | `{{KIT}}/skills/protect-recon/SKILL.md` |
-| Automated scanning (secrets, injection, misconfig, deps) | `{{KIT}}/skills/protect-scan/SKILL.md` |
+| Dependency vulnerabilities, malicious packages, SBOM | `{{KIT}}/skills/protect-deps/SKILL.md` |
+| Automated scanning (secrets incl. git history, injection, misconfig, CI, LLM) | `{{KIT}}/skills/protect-scan/SKILL.md` |
 | File-by-file manual review + anti-amateur check | `{{KIT}}/skills/protect-deep-review/SKILL.md` |
 | Build the defense system for this project type | `{{KIT}}/skills/protect-defense/SKILL.md` |
 | Verify fixes and write the report | `{{KIT}}/skills/protect-verify/SKILL.md` |
@@ -20,4 +21,4 @@ Hard rules, always:
 1. Defensive work on this project only; never probe third-party or production systems.
 2. Never print, copy or commit secret values; a committed secret must be rotated, not just deleted.
 3. Stay native to the project's language, framework and conventions; keep build and tests green.
-4. Every claim in the report needs evidence (file:line, command output, test name).
+4. Every claim in the report needs evidence (file:line, command output, test name); confirmed findings are reproduced locally or explicitly waived; unknowns are `needs_validation`, never guessed.

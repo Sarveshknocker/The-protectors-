@@ -1,0 +1,9 @@
+name: release
+on: push
+# ruleid: ci.write-all
+permissions: write-all
+jobs:
+  r:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ok

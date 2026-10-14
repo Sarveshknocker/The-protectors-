@@ -1,0 +1,10 @@
+{
+  // ok-file: ext.mv2, ext.broad-host-permissions, ext.dangerous-permissions, ext.weak-csp, ext.externally-connectable, ext.web-accessible-all
+  "manifest_version": 3,
+  "name": "Demo",
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": ["https://api.acme.io/*"],
+  "content_security_policy": { "extension_pages": "script-src 'self'; object-src 'self'" },
+  "externally_connectable": { "matches": ["https://app.acme.io/*"] },
+  "web_accessible_resources": [{ "resources": ["img/logo.png"], "matches": ["https://app.acme.io/*"], "use_dynamic_url": true }]
+}

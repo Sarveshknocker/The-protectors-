@@ -1,0 +1,12 @@
+apiVersion: apps/v1
+kind: Deployment
+spec:
+  template:
+    spec:
+      containers:
+        - name: app
+          securityContext:
+            # ruleid: k8s.privileged
+            privileged: true
+            # ok: k8s.privileged
+            allowPrivilegeEscalation: false

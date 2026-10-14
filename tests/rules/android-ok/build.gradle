@@ -1,0 +1,9 @@
+android {
+    buildTypes {
+        // ok-file: android.minify-off
+        release {
+            minifyEnabled true
+            shrinkResources true
+        }
+    }
+}

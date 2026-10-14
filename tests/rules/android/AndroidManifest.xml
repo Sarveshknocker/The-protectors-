@@ -1,0 +1,16 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.acme.demo">
+    <application
+        <!-- ruleid: android.debuggable -->
+        android:debuggable="true"
+        <!-- ruleid: android.allow-backup -->
+        android:allowBackup="true"
+        <!-- ruleid: android.cleartext -->
+        android:usesCleartextTraffic="true">
+        <!-- ruleid: android.exported -->
+        <activity android:name=".ShareActivity" android:exported="true">
+        </activity>
+        <!-- ok: android.exported -->
+        <activity android:name=".AdminActivity" android:exported="true" android:permission="com.acme.permission.SIGNATURE">
+        </activity>
+    </application>
+</manifest>

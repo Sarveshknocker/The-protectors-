@@ -1,0 +1,31 @@
+# ruleid-file: ci.no-permissions
+name: bad
+on:
+  pull_request_target:
+  issues:
+jobs:
+  build:
+    # ruleid: ci.self-hosted-pr
+    runs-on: self-hosted
+    steps:
+      # ok: ci.unpinned-action
+      - uses: actions/checkout@v4
+        with:
+          # ruleid: ci.pull-request-target
+          ref: ${{ github.event.pull_request.head.sha }}
+      # ruleid: ci.unpinned-action
+      - uses: someone/lint-action@v1
+      # ruleid: ci.script-injection
+      - run: echo "${{ github.event.issue.title }}"
+      # ruleid: ci.script-injection-block
+      - run: |
+          echo "start"
+          echo "${{ github.event.issue.body }}"
+      # ruleid: ci.env-injection
+      - run: echo "BRANCH=${{ github.head_ref }}" >> $GITHUB_ENV
+      # ruleid: ci.curl-pipe-shell
+      - run: curl -sL https://get.acme.io/x.sh | bash
+  call:
+    uses: ./.github/workflows/reusable.yml
+    # ruleid: ci.secrets-inherit
+    secrets: inherit

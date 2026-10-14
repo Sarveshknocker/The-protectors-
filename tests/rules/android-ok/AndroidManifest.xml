@@ -1,0 +1,6 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.acme.safe">
+    <!-- ok-file: android.debuggable, android.allow-backup, android.cleartext, android.exported -->
+    <application android:allowBackup="false" android:usesCleartextTraffic="false" android:networkSecurityConfig="@xml/network_security_config">
+        <activity android:name=".MainActivity" android:exported="false" />
+    </application>
+</manifest>

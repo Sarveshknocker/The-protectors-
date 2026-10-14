@@ -1,15 +1,50 @@
 {
   "name": "the-protectors",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "repository": "github:Sarveshknocker/The-protectors-",
-  "description": "Autonomous cybersecurity verification team for any AI coding assistant: identifies your project type, analyses every file, and builds a tailored defense system with a verified security report.",
+  "description": "Autonomous cybersecurity verification team for any AI coding assistant: identifies your project type, scans code, git history and dependencies (OSV + CISA KEV + EPSS, CycloneDX SBOM), reviews every file against an evidence contract, and builds a tailored defense system with a verified security report.",
   "type": "module",
   "bin": {
     "protectors": "bin/protectors.mjs"
   },
-  "files": ["bin", "skills", "agents", "adapters", ".claude-plugin", "README.md", "LICENSE"],
-  "engines": { "node": ">=18" },
-  "scripts": { "test": "node tests/run.mjs" },
-  "keywords": ["security", "appsec", "sast", "devsecops", "owasp", "ai-agents", "agents-md", "claude-code", "cursor", "copilot", "codex"],
+  "files": [
+    "bin",
+    "skills",
+    "agents",
+    "adapters",
+    ".claude-plugin",
+    "README.md",
+    "LICENSE",
+    ".codex-plugin",
+    ".agents",
+    "evals"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node tests/run.mjs",
+    "test:rules": "node skills/protect-scan/scripts/rule-test.mjs tests/rules --require-coverage"
+  },
+  "keywords": [
+    "security",
+    "appsec",
+    "sast",
+    "devsecops",
+    "owasp",
+    "ai-agents",
+    "agents-md",
+    "claude-code",
+    "cursor",
+    "copilot",
+    "codex",
+    "sbom",
+    "cyclonedx",
+    "osv",
+    "secret-scanning",
+    "supply-chain",
+    "github-actions",
+    "agent-skills"
+  ],
   "license": "MIT"
 }

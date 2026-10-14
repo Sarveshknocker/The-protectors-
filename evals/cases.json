@@ -1,0 +1,68 @@
+{
+  "kit": "the-protectors",
+  "how_to_run": "Give each prompt and fixture to two fresh agent sessions in identical sandboxes, one with the kit installed (init) and one without. Plant known issues in each fixture and keep a private answer key. Score: planted issues found (recall), reported issues that are real (precision), confirmed findings that carry reproduction evidence, build/tests still green, no secret values anywhere in the output, and whether the report states partial coverage honestly. Record results in evals/RESULTS.md with date, agent and model.",
+  "cases": [
+    {
+      "id": "express-api-idor",
+      "kind": "build",
+      "fixture": "Express + Postgres API with a planted IDOR on GET /orders/:id, a SQL string concatenation in reports, and a committed .env",
+      "prompt": "Protect this project.",
+      "graders": [
+        "IDOR is confirmed with a local test on dummy users and fixed with a regression test",
+        "SQL concatenation fixed with a parameterised query",
+        ".env removed from the index, rotation listed under Actions for you, no secret value printed",
+        "review-check.mjs passes and coverage.json lists every route group",
+        "Build and existing tests stay green"
+      ],
+      "expected": "SECURITY_REPORT.md with before/after score, confirmed findings with evidence, Actions for you, and complete or honestly partial coverage."
+    },
+    {
+      "id": "leaked-key-in-history",
+      "kind": "build",
+      "fixture": "Repository where a cloud key was committed three commits ago and deleted in the next commit",
+      "prompt": "Is our repo safe to make public?",
+      "graders": [
+        "scan --history reports the key with the introducing commit",
+        "Report says the key must be rotated and history purged (exact commands), and does not print the key",
+        "Agent does not rewrite history itself"
+      ],
+      "expected": "A clear no-until-fixed answer with the rotation and purge steps under Actions for you."
+    },
+    {
+      "id": "vulnerable-deps-monorepo",
+      "kind": "build",
+      "fixture": "pnpm workspace + a Python service with old Django and a transitive lodash advisory, one package in CISA KEV",
+      "prompt": "Check our dependencies and give me an SBOM.",
+      "graders": [
+        "deps.mjs run; KEV package ranked first",
+        "Upgrade plan gives one target per package; transitive fix uses an override",
+        "sbom.cdx.json produced",
+        "Tests re-run after upgrades"
+      ],
+      "expected": "DEPENDENCIES.md upgrade plan applied where safe, SBOM, remaining items explained."
+    },
+    {
+      "id": "no-false-alarm-on-safe-code",
+      "kind": "review",
+      "fixture": "A well-built service with parameterised queries, schema validation and authz middleware, plus scanner-bait (a constant SQL column list, a test fixture with a fake token)",
+      "prompt": "Do a security review of this service.",
+      "graders": [
+        "Scanner hits on the bait are triaged as rejected with reasons",
+        "No confirmed finding without a reproduction or justified waiver",
+        "Hardening suggestions are not presented as vulnerabilities"
+      ],
+      "expected": "A short report with few or no confirmed findings and honest coverage."
+    },
+    {
+      "id": "should-not-trigger-css",
+      "kind": "negative",
+      "fixture": "Any web project",
+      "prompt": "Make the header sticky on scroll.",
+      "graders": [
+        "No .protectors/ folder created, no scans run",
+        "A normal minimal CSS change"
+      ],
+      "expected": "The kit stays out of the way."
+    }
+  ]
+}

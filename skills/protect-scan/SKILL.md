@@ -1,6 +1,6 @@
 ---
 name: protect-scan
-description: Automated security scanning of a project — hard-coded secrets, injection, XSS, weak crypto, auth/session flaws, TLS/CORS misconfig, SSRF, path traversal, unsafe deserialisation, Electron/extension/mobile/Docker/Kubernetes/Terraform/CI misconfigurations, C/C++ memory safety, firmware (TLS, OTA, secure boot, debug ports) and driver (IOCTL, user-copy, device ACL) flaws, dependency and repo hygiene — plus ecosystem dependency audits. Produces Markdown, JSON and SARIF.
+description: Automated security scanning of a project — hard-coded secrets (35+ providers, entropy-checked, and in git history), injection, XSS, weak crypto, auth/session flaws, TLS/CORS misconfig, SSRF, path traversal, unsafe deserialisation, Electron/extension/mobile/Docker/Kubernetes/Terraform/CI misconfigurations, C/C++ memory safety, firmware (TLS, OTA, secure boot, debug ports) and driver (IOCTL, user-copy, device ACL) flaws, dependency and repo hygiene — plus ecosystem dependency audits. Produces Markdown, JSON and SARIF.
 ---
 
 # Automated scan
@@ -9,11 +9,16 @@ description: Automated security scanning of a project — hard-coded secrets, in
 ```bash
 node <kit>/skills/protect-scan/scripts/scan.mjs . --out .protectors --fail-on none
 ```
-- 90+ rules mapped to CWE and OWASP Top 10 / Mobile Top 10.
+- 130+ rules mapped to CWE (with the 2024 CWE Top 25 flagged), OWASP Top 10, Mobile Top 10 and the OWASP Top 10 for LLM applications. Every rule has annotated true/false-positive tests.
+- Families: secrets, injection, XSS, crypto, auth/session, TLS/CORS/config, files/SSRF/deserialisation, LLM features (model output executed, user text in the system prompt), document rendering (HTML→PDF engines fed request data, PDF.js eval), Electron, extensions, mobile, C/C++, firmware, kernel and Windows drivers, Docker/Kubernetes/Terraform, GitHub Actions (script injection incl. multi-line `run:` blocks, `GITHUB_ENV` injection, self-hosted runners on PRs, missing token permissions, curl|sh, unpinned actions).
+- `--history` also scans every commit's added lines: a secret deleted from the code but still in git history is reported as `history.*` with the commit that introduced it; a secret still present notes when it first entered history.
+- Dependency findings from `protect-deps` (`.protectors/deps.json`) are merged into the report and score (skip with `--no-deps`).
 - Secrets are **redacted** in all output.
 - Findings in tests/docs/fixtures are downgraded one level and tagged.
 - Suppress a confirmed false positive: comment `protectors-ignore: <rule-id> <reason>` on the line (or the one above), or add to `.protectors-ignore.json` (committed, reviewable; `rule` may be `"*"` with a `path`; `reason` required).
-- CI mode: `--fail-on high` exits 1 if any high/critical finding exists in source.
+- CI mode: `--fail-on high` exits 1 if any high/critical finding exists in source or history.
+- **Baseline** for existing projects: `--write-baseline .protectors-baseline.json` once (commit it), then CI runs `--baseline .protectors-baseline.json --fail-on high` and fails only on **new** findings. The baseline stores fingerprints only, no code or secrets. Shrink it over time.
+- **Project-specific rules**: add `.protectors-rules.json` at the project root (`[{ "id", "severity", "title", "pattern", "flags", "files", "fix", "cwe", "owasp" }]`); ids become `custom.<id>`. Test them like the built-ins: put annotated examples (`// ruleid: custom.<id>` above a bad line, `// ok: custom.<id>` above a good one) in a folder with a copy of the rules file and run `node <kit>/skills/protect-scan/scripts/rule-test.mjs <folder> --require-coverage`.
 
 ## 2. Ecosystem tools (run what applies and is available; don't install globally without need — prefer npx/pipx/uvx)
 | Ecosystem | Command | Notes |

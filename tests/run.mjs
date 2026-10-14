@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import http from 'node:http';
 import { fileURLToPath } from 'node:url';
 
 const KIT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -35,7 +36,7 @@ function recon(dir) {
 function scan(dir, extra = ['--fail-on', 'none']) {
   const r = node([path.join(KIT, 'skills/protect-scan/scripts/scan.mjs'), dir, ...extra]);
   const res = JSON.parse(fs.readFileSync(path.join(dir, '.protectors/findings.json'), 'utf8'));
-  return { ...res, status: r.status, rules: new Set(res.findings.map((f) => f.rule)) };
+  return { ...res, status: r.status, stderr: r.stderr, rules: new Set(res.findings.map((f) => f.rule)) };
 }
 const expectRules = (res, ids) => { for (const id of ids) assert.ok(res.rules.has(id), `expected ${id}; got ${[...res.rules].join(', ')}`); };
 
@@ -357,9 +358,264 @@ test('Every skill has valid frontmatter and referenced files exist', () => {
   }
 });
 
+// ---------------------------------------------------------------- v0.2: rules corpus, deps, history, baseline, evidence
+const { runCorpus, fake } = await import(new URL('../skills/protect-scan/scripts/rule-test.mjs', import.meta.url));
+const { cvss3, cmpVersion, nextFixed } = await import(new URL('../skills/protect-deps/scripts/deps.mjs', import.meta.url));
+const { findLockfiles, parseLockfile, purl } = await import(new URL('../skills/protect-deps/scripts/lockfiles.mjs', import.meta.url));
+const { check: reviewCheck } = await import(new URL('../skills/protect-verify/scripts/review-check.mjs', import.meta.url));
+const nodeAsync = (args, opts = {}) => new Promise((resolve) => {
+  const child = spawn(process.execPath, args, { cwd: opts.cwd, env: { ...process.env, ...(opts.env ?? {}) } });
+  let stdout = ''; let stderr = '';
+  child.stdout.on('data', (d) => { stdout += d; }); child.stderr.on('data', (d) => { stderr += d; });
+  child.on('close', (status) => resolve({ status, stdout, stderr }));
+});
+const DEPS = path.join(KIT, 'skills/protect-deps/scripts/deps.mjs');
+const SCAN = path.join(KIT, 'skills/protect-scan/scripts/scan.mjs');
+
+test('Rule corpus: every rule fires on its ruleid lines and stays quiet on its ok lines', () => {
+  const r = runCorpus(path.join(KIT, 'tests/rules'), { requireCoverage: true });
+  assert.deepEqual(r.failures, [], r.failures.join('\n'));
+  assert.ok(r.rules >= 135 && r.covered === r.rules, `${r.covered}/${r.rules}`);
+});
+
+test('CVSS v3 calculator and version ordering match the specs', () => {
+  assert.equal(cvss3('CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H'), 9.8);
+  assert.equal(cvss3('CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N'), 6.1);
+  assert.equal(cvss3('CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N'), 5.5);
+  assert.equal(cvss3('CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H'), 10);
+  assert.equal(cvss3('CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N'), 0);
+  assert.equal(cvss3('CVSS:4.0/AV:N'), null);
+  assert.ok(cmpVersion('1.10.0', '1.9.9') > 0);
+  assert.ok(cmpVersion('1.0.0-rc1', '1.0.0') < 0);
+  assert.equal(cmpVersion('2.0', '2.0.0'), 0);
+  assert.ok(cmpVersion('4.17.21', '4.17.3') > 0);
+  assert.equal(nextFixed(['1.11.28', '2.2.10', '3.0.3'], '2.2.0'), '2.2.10');
+  assert.equal(nextFixed(['1.0.0'], '2.0.0'), null);
+});
+
+const LOCKS = {
+  'package-lock.json': JSON.stringify({ lockfileVersion: 3, packages: { '': { dependencies: { lodash: '^4' }, devDependencies: { minimist: '0.0.8' } }, 'node_modules/lodash': { version: '4.17.15' }, 'node_modules/minimist': { version: '0.0.8', dev: true }, 'node_modules/lodash/node_modules/ms': { version: '2.0.0' }, 'node_modules/evil-pkg': { version: '1.0.0' } } }),
+  'web/yarn.lock': '# yarn lockfile v1\n\n"@babel/core@^7.0.0", "@babel/core@^7.1.0":\n  version "7.24.0"\n  resolved "x"\n\nleft-pad@^1.3.0:\n  version "1.3.0"\n',
+  'app/pnpm-lock.yaml': "lockfileVersion: '9.0'\n\nimporters:\n\n  .:\n    dependencies:\n      axios:\n        specifier: ^1.6.0\n        version: 1.6.0\n\npackages:\n\n  axios@1.6.0:\n    resolution: {integrity: x}\n\n  '@types/node@20.1.0':\n    resolution: {integrity: y}\n\nsnapshots:\n\n  axios@1.6.0: {}\n",
+  'requirements.txt': 'Django==2.2.0\nrequests>=2\nPyYAML[extra]==5.3  # pinned\n',
+  'svc/poetry.lock': '[[package]]\nname = "jinja2"\nversion = "2.10"\ncategory = "main"\n\n[[package]]\nname = "pytest"\nversion = "7.0.0"\ncategory = "dev"\n',
+  'rs/Cargo.lock': '[[package]]\nname = "app"\nversion = "0.1.0"\n\n[[package]]\nname = "smallvec"\nversion = "1.6.0"\nsource = "registry+https://github.com/rust-lang/crates.io-index"\n',
+  'go/go.mod': 'module example.com/app\n\ngo 1.22\n\nrequire (\n\tgolang.org/x/net v0.17.0\n\tgithub.com/pkg/errors v0.9.1 // indirect\n)\n',
+  'php/composer.lock': JSON.stringify({ packages: [{ name: 'guzzlehttp/guzzle', version: '7.4.0' }], 'packages-dev': [{ name: 'phpunit/phpunit', version: 'v9.0.0' }] }),
+  'rb/Gemfile.lock': 'GEM\n  remote: https://rubygems.org/\n  specs:\n    rails (6.1.0)\n    nokogiri (1.11.0-x86_64-linux)\n\nPLATFORMS\n  ruby\n',
+  'dart/pubspec.lock': 'packages:\n  http:\n    dependency: "direct main"\n    description:\n      name: http\n    source: hosted\n    version: "0.13.0"\n  mylib:\n    dependency: "direct main"\n    source: path\n    version: "1.0.0"\n',
+  'cs/packages.lock.json': JSON.stringify({ version: 1, dependencies: { 'net8.0': { 'Newtonsoft.Json': { type: 'Direct', resolved: '12.0.1' }, 'App.Core': { type: 'Project' } } } }),
+  'java/pom.xml': '<project><dependencies><dependency><groupId>org.apache.logging.log4j</groupId><artifactId>log4j-core</artifactId><version>2.14.1</version></dependency><dependency><groupId>junit</groupId><artifactId>junit</artifactId><version>4.12</version><scope>test</scope></dependency></dependencies></project>',
+  'kt/gradle.lockfile': 'com.fasterxml.jackson.core:jackson-databind:2.9.8=compileClasspath,runtimeClasspath\nempty=\n',
+};
+
+test('Lockfile parsers read exact versions across 12 formats; purls are spec-shaped', () => {
+  const dir = fixture(LOCKS);
+  const files = findLockfiles(dir);
+  assert.equal(files.length, Object.keys(LOCKS).length, files.join(', '));
+  const all = files.flatMap((f) => parseLockfile(dir, f));
+  const has = (eco, name, version) => assert.ok(all.some((p) => p.ecosystem === eco && p.name === name && p.version === version), `missing ${eco} ${name}@${version}`);
+  has('npm', 'lodash', '4.17.15'); has('npm', 'ms', '2.0.0'); has('npm', '@babel/core', '7.24.0'); has('npm', 'left-pad', '1.3.0'); has('npm', 'axios', '1.6.0'); has('npm', '@types/node', '20.1.0');
+  has('PyPI', 'Django', '2.2.0'); has('PyPI', 'PyYAML', '5.3'); has('PyPI', 'jinja2', '2.10'); has('crates.io', 'smallvec', '1.6.0'); has('Go', 'golang.org/x/net', '0.17.0');
+  has('Packagist', 'guzzlehttp/guzzle', '7.4.0'); has('Packagist', 'phpunit/phpunit', '9.0.0'); has('RubyGems', 'nokogiri', '1.11.0'); has('Pub', 'http', '0.13.0');
+  has('NuGet', 'Newtonsoft.Json', '12.0.1'); has('Maven', 'org.apache.logging.log4j:log4j-core', '2.14.1'); has('Maven', 'com.fasterxml.jackson.core:jackson-databind', '2.9.8');
+  assert.ok(!all.some((p) => p.name === 'requests' || p.name === 'app' || p.name === 'mylib' || p.name === 'App.Core'), 'unpinned, workspace, path and project entries are skipped');
+  const npm = parseLockfile(dir, 'package-lock.json');
+  assert.equal(npm.find((p) => p.name === 'lodash').direct, true);
+  assert.equal(npm.find((p) => p.name === 'ms').direct, false);
+  assert.equal(npm.find((p) => p.name === 'minimist').dev, true);
+  assert.equal(parseLockfile(dir, 'svc/poetry.lock').find((p) => p.name === 'pytest').dev, true);
+  assert.equal(parseLockfile(dir, 'java/pom.xml').find((p) => p.name === 'junit:junit').dev, true);
+  assert.equal(purl({ ecosystem: 'npm', name: '@babel/core', version: '7.24.0' }), 'pkg:npm/%40babel/core@7.24.0');
+  assert.equal(purl({ ecosystem: 'PyPI', name: 'PyYAML', version: '5.3' }), 'pkg:pypi/pyyaml@5.3');
+  assert.equal(purl({ ecosystem: 'Maven', name: 'junit:junit', version: '4.12' }), 'pkg:maven/junit/junit@4.12');
+  assert.equal(npm.find((p) => p.name === 'ms').line, LOCKS['package-lock.json'].slice(0, LOCKS['package-lock.json'].indexOf('"node_modules/lodash/node_modules/ms"')).split('\n').length);
+});
+
+/** Mock OSV / CISA KEV / FIRST EPSS on 127.0.0.1, recording every request. */
+async function mockVulnServer() {
+  const seen = [];
+  const VULNS = {
+    'GHSA-aaaa': { id: 'GHSA-aaaa', aliases: ['CVE-2021-0001'], summary: 'Prototype pollution in lodash', severity: [{ type: 'CVSS_V3', score: 'CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H' }], affected: [{ package: { ecosystem: 'npm', name: 'lodash' }, ranges: [{ type: 'SEMVER', events: [{ introduced: '0' }, { fixed: '4.17.21' }] }, { type: 'GIT', events: [{ fixed: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef' }] }] }] },
+    'PYSEC-1': { id: 'PYSEC-1', aliases: ['CVE-2021-0001', 'GHSA-aaaa'], summary: 'dup', affected: [{ package: { ecosystem: 'npm', name: 'lodash' }, ranges: [{ type: 'ECOSYSTEM', events: [{ fixed: '4.17.20' }] }] }] },
+    'GHSA-bbbb': { id: 'GHSA-bbbb', aliases: ['CVE-2021-0002'], summary: 'ReDoS', database_specific: { severity: 'MODERATE' }, affected: [{ package: { ecosystem: 'npm', name: 'lodash' }, ranges: [{ type: 'SEMVER', events: [{ fixed: '4.17.19' }] }] }] },
+    'GHSA-cccc': { id: 'GHSA-cccc', aliases: ['CVE-2021-0003'], summary: 'minimist pollution', database_specific: { severity: 'LOW' }, affected: [{ package: { ecosystem: 'npm', name: 'minimist' }, ranges: [{ type: 'SEMVER', events: [{ fixed: '0.2.4' }] }] }] },
+    'MAL-2024-1': { id: 'MAL-2024-1', summary: 'Malicious code in evil-pkg', affected: [{ package: { ecosystem: 'npm', name: 'evil-pkg' } }] },
+    'GHSA-dddd': { id: 'GHSA-dddd', aliases: ['CVE-2021-0004'], summary: 'Django SQLi', database_specific: { severity: 'LOW' }, affected: [{ package: { ecosystem: 'PyPI', name: 'Django' }, ranges: [{ type: 'ECOSYSTEM', events: [{ fixed: '2.2.10' }] }] }] },
+  };
+  const BY_PKG = { 'npm|lodash': ['GHSA-aaaa', 'PYSEC-1', 'GHSA-bbbb'], 'npm|minimist': ['GHSA-cccc'], 'npm|evil-pkg': ['MAL-2024-1'], 'PyPI|Django': ['GHSA-dddd'] };
+  const server = http.createServer((req, res) => {
+    let body = ''; req.on('data', (d) => { body += d; });
+    req.on('end', () => {
+      seen.push({ method: req.method, url: req.url, body });
+      const json = (o) => { res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(o)); };
+      if (req.url === '/osv/querybatch') return json({ results: JSON.parse(body).queries.map((q) => ({ vulns: (BY_PKG[`${q.package.ecosystem}|${q.package.name}`] ?? []).map((id) => ({ id })) })) });
+      if (req.url.startsWith('/osv/vulns/')) return json(VULNS[decodeURIComponent(req.url.slice(11))]);
+      if (req.url === '/kev') return json({ vulnerabilities: [{ cveID: 'CVE-2021-0004' }] });
+      if (req.url.startsWith('/epss')) return json({ data: [{ cve: 'CVE-2021-0002', epss: '0.42', percentile: '0.97' }] });
+      res.writeHead(404); res.end();
+    });
+  });
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  return { server, seen, env: { PROTECTORS_OSV_API: `${base}/osv`, PROTECTORS_KEV_URL: `${base}/kev`, PROTECTORS_EPSS_API: `${base}/epss` } };
+}
+
+test('deps: OSV + KEV + EPSS prioritisation, alias merge, malicious packages, upgrade plan, SBOM, scanner merge', async () => {
+  const { server, seen, env } = await mockVulnServer();
+  try {
+    const dir = fixture({ 'package-lock.json': LOCKS['package-lock.json'], 'requirements.txt': 'Django==2.2.0\n', 'package.json': JSON.stringify({ name: 'shop', version: '1.2.3' }) });
+    const r = await nodeAsync([DEPS, dir, '--fail-on', 'critical'], { env });
+    assert.equal(r.status, 1, 'critical findings fail the run');
+    const d = JSON.parse(fs.readFileSync(path.join(dir, '.protectors/deps.json'), 'utf8'));
+    const by = (pkg, id) => d.findings.find((f) => f.package.name === pkg && f.vuln.aliases.includes(id));
+    const lodash = d.findings.filter((f) => f.package.name === 'lodash');
+    assert.equal(lodash.length, 2, 'GHSA-aaaa and PYSEC-1 share CVE-2021-0001 and merge into one finding');
+    const a = by('lodash', 'CVE-2021-0001');
+    assert.equal(a.vuln.id, 'GHSA-aaaa'); assert.equal(a.vuln.cvss, 9.8); assert.equal(a.severity, 'critical');
+    assert.ok(!a.vuln.fixed.some((v) => /deadbeef/.test(v)), 'GIT commit ranges are not versions');
+    assert.equal(a.vuln.fixedNext, '4.17.20');
+    assert.equal(by('lodash', 'CVE-2021-0002').severity, 'high', 'EPSS 42% raises MODERATE to high');
+    assert.equal(by('minimist', 'CVE-2021-0003').severity, 'info', 'LOW on a dev-only dependency drops a level');
+    assert.equal(by('Django', 'CVE-2021-0004').severity, 'critical', 'CISA KEV makes it critical');
+    assert.equal(by('Django', 'CVE-2021-0004').vuln.kev, true);
+    const mal = d.findings.find((f) => f.rule === 'deps.malicious');
+    assert.equal(mal.package.name, 'evil-pkg'); assert.equal(mal.severity, 'critical');
+    const plan = Object.fromEntries(d.upgradePlan.map((e) => [e.name, e]));
+    assert.equal(plan.lodash.to, '4.17.20'); assert.equal(plan.lodash.fixes, 2); assert.equal(plan.Django.kev, true);
+    assert.equal(d.upgradePlan[0].name, 'Django', 'KEV first');
+    const sbom = JSON.parse(fs.readFileSync(path.join(dir, '.protectors/sbom.cdx.json'), 'utf8'));
+    assert.equal(sbom.bomFormat, 'CycloneDX'); assert.equal(sbom.specVersion, '1.5'); assert.equal(sbom.metadata.component.name, 'shop');
+    assert.ok(sbom.components.some((c) => c.purl === 'pkg:npm/lodash@4.17.15'));
+    assert.ok(sbom.vulnerabilities.some((v) => v.id === 'GHSA-aaaa' && v.affects[0].ref === 'pkg:npm/lodash@4.17.15'));
+    assert.equal(JSON.parse(fs.readFileSync(path.join(dir, '.protectors/deps.sarif'), 'utf8')).version, '2.1.0');
+    assert.match(fs.readFileSync(path.join(dir, '.protectors/DEPENDENCIES.md'), 'utf8'), /## Upgrade plan[\s\S]*\| Django \| 2\.2\.0 \| 2\.2\.10 \|/);
+    const query = JSON.parse(seen.find((s) => s.url === '/osv/querybatch').body);
+    assert.ok(query.queries.every((q) => Object.keys(q).sort().join() === 'package,version'), 'only package + version leave the machine');
+    // the scanner merges dependency findings into its report and score
+    const s = scan(dir);
+    assert.ok(s.rules.has('deps.vulnerable') && s.rules.has('deps.malicious'));
+    assert.equal(s.deps.findings, d.findings.length);
+  } finally { server.close(); }
+});
+
+test('deps: --offline and --exclude keep package names local', async () => {
+  const { server, seen, env } = await mockVulnServer();
+  try {
+    const dir = fixture({ 'package-lock.json': JSON.stringify({ lockfileVersion: 3, packages: { '': {}, 'node_modules/@acme/secret-sauce': { version: '1.0.0' }, 'node_modules/lodash': { version: '4.17.15' } } }) });
+    let r = await nodeAsync([DEPS, dir, '--offline'], { env });
+    assert.equal(r.status, 0); assert.equal(seen.length, 0, 'offline makes no requests');
+    assert.equal(JSON.parse(fs.readFileSync(path.join(dir, '.protectors/sbom.cdx.json'), 'utf8')).components.length, 2);
+    r = await nodeAsync([DEPS, dir, '--exclude', '^@acme/'], { env });
+    assert.equal(r.status, 0);
+    assert.ok(!seen.some((s) => s.body.includes('secret-sauce')), 'excluded names never sent');
+  } finally { server.close(); }
+});
+
+test('Secrets in git history: removed secrets are reported with their commit; live ones note first commit', () => {
+  const dir = fixture({ 'README.md': '# demo\n' });
+  const git = (...a) => { const r = spawnSync('git', ['-C', dir, '-c', 'user.name=t', '-c', 'user.email=t@example.com', '-c', 'commit.gpgsign=false', ...a], { encoding: 'utf8' }); assert.equal(r.status, 0, r.stderr); return r.stdout; };
+  git('init', '-q'); git('add', '.'); git('commit', '-qm', 'init');
+  fs.writeFileSync(path.join(dir, 'config.js'), `const token = "${fake('github')}";\nconst stripe = "${fake('stripe')}";\n`);
+  git('add', '.'); git('commit', '-qm', 'add keys');
+  const leakCommit = git('rev-parse', 'HEAD').trim().slice(0, 12);
+  fs.writeFileSync(path.join(dir, 'config.js'), `const token = process.env.GITHUB_TOKEN;\nconst stripe = "${fake('stripe')}";\n`);
+  git('add', '.'); git('commit', '-qm', 'remove github token');
+  let s = scan(dir);
+  assert.ok(!s.rules.has('history.github-token'), 'not without --history');
+  s = scan(dir, ['--history', '--fail-on', 'high']);
+  assert.equal(s.status, 1);
+  const h = s.findings.find((f) => f.rule === 'history.github-token');
+  assert.ok(h, [...s.rules].join(', '));
+  assert.equal(h.commit, leakCommit); assert.equal(h.context, 'history'); assert.ok(!h.snippet.includes(fake('github')), 'redacted');
+  const live = s.findings.find((f) => f.rule === 'secret.stripe-live');
+  assert.equal(live.firstCommit, leakCommit, 'live secret knows when it entered history');
+  assert.ok(!s.rules.has('history.stripe-live'), 'a secret still in HEAD is not duplicated as a history finding');
+  assert.equal(s.history.secretsOnlyInHistory, 1);
+});
+
+test('Baseline: accepted findings stop failing CI; new ones still fail', () => {
+  const dir = fixture({ 'server.js': "const { exec } = require('child_process');\nexec(`ls ${process.argv[2]}`);\n" });
+  let s = scan(dir, ['--write-baseline', '.protectors-baseline.json', '--fail-on', 'high']);
+  assert.equal(s.status, 1);
+  s = scan(dir, ['--baseline', '.protectors-baseline.json', '--fail-on', 'high']);
+  assert.equal(s.status, 0, 'only baselined findings → pass');
+  assert.ok(s.findings.every((f) => f.baseline));
+  fs.appendFileSync(path.join(dir, 'server.js'), "db.query(\"SELECT * FROM t WHERE id = '\" + req.query.id + \"'\");\n");
+  s = scan(dir, ['--baseline', '.protectors-baseline.json', '--fail-on', 'high']);
+  assert.equal(s.status, 1, 'new finding fails');
+  assert.equal(s.newCounts.critical, 1);
+  const sarif = JSON.parse(fs.readFileSync(path.join(dir, '.protectors/findings.sarif'), 'utf8'));
+  assert.ok(sarif.runs[0].results.some((r) => r.baselineState === 'new') && sarif.runs[0].results.some((r) => r.baselineState === 'unchanged'));
+  assert.ok(!fs.readFileSync(path.join(dir, '.protectors-baseline.json'), 'utf8').includes('exec('), 'baseline stores no code');
+});
+
+test('Findings carry CWE Top 25 and compliance summary; invalid custom rules are rejected', () => {
+  const dir = fixture({ 'a.js': "app.get('/f', (req, res) => res.sendFile(req.query.name));\n" });
+  const s = scan(dir);
+  assert.ok(s.findings.find((f) => f.rule === 'file.path-traversal').cweTop25);
+  assert.ok(s.compliance.cweTop25.includes('CWE-22'));
+  fs.writeFileSync(path.join(dir, '.protectors-rules.json'), '[{ "id": "x" }]');
+  const r = node([SCAN, dir, '--fail-on', 'none']);
+  assert.equal(r.status, 2); assert.match(r.stderr, /Invalid \.protectors-rules\.json/);
+});
+
+test('Evidence contract: a well-formed review passes; each broken rule is caught', () => {
+  const dir = fixture({ 'src/routes/orders.ts': 'line1\nline2\nline3\n', 'src/services/orders.ts': 'a\nb\nc\nd\n', 'test/orders.idor.test.ts': 'test\n' });
+  const out = path.join(dir, '.protectors'); fs.mkdirSync(out);
+  const coverage = { units: [
+    { id: 'api/orders:authz', surface: 'REST /api/orders', boundary: 'user → other users', attack_class: 'authorization', status: 'covered', reviewed_paths: ['src/routes/orders.ts'], findings: ['idor.orders'] },
+    { id: 'infra/cdn', surface: 'CDN', boundary: 'browser → app', attack_class: 'headers', status: 'blocked', note: 'not in repo' },
+  ] };
+  const good = { fingerprint: 'idor.orders', verdict: 'confirmed', unit: 'api/orders:authz', title: 'IDOR', root_cause: 'no owner filter',
+    boundary: { attacker: 'customer', input: 'GET /orders/:id', control: 'ownership', crossed: 'user → others', affected: 'orders' },
+    trace: [{ kind: 'entrypoint', file: 'src/routes/orders.ts', line: 2, note: 'route' }, { kind: 'sink', file: 'src/services/orders.ts', line: 4, note: 'findById' }],
+    evidence: [{ type: 'test', command: 'npm test', file: 'test/orders.idor.test.ts', result: '200 for other user' }],
+    severity: 'high', severity_rationale: 'reads any order', fix: { invariant: 'owner only', change: 'filter by owner', regression_test: 'test/orders.idor.test.ts' }, status: 'fixed' };
+  const nv = { fingerprint: 'csp.edge', verdict: 'needs_validation', unit: 'infra/cdn', title: 'CSP maybe at edge', boundary: good.boundary, trace: [good.trace[0]], blocker: 'CDN config absent', validation_plan: 'owner checks headers' };
+  const write = (findings, cov = coverage) => { fs.writeFileSync(path.join(out, 'review.json'), JSON.stringify({ findings })); fs.writeFileSync(path.join(out, 'coverage.json'), JSON.stringify(cov)); return reviewCheck(dir); };
+  let r = write([good, nv]);
+  assert.deepEqual(r.errors, []); assert.equal(r.summary.confirmed.high, 1); assert.equal(r.summary.needsValidation, 1);
+  assert.ok(fs.existsSync(path.join(out, 'REVIEW_STATUS.md')));
+  const broken = (patch, re) => { const e = write(patch).errors.join('\n'); assert.match(e, re); };
+  broken([{ ...good, evidence: [{ type: 'reading', result: 'looked at it' }] }, nv], /reproduction_waiver/);
+  broken([good, { ...nv, severity: 'high' }], /only confirmed findings carry a severity/);
+  broken([{ ...good, trace: [{ ...good.trace[0], line: 99 }, good.trace[1]] }, nv], /past the end of the file/);
+  broken([{ ...good, trace: [good.trace[1]] }, nv], /entrypoint and a sink/);
+  broken([{ ...good, fix: { invariant: 'x', change: 'y' } }, nv], /regression_test/);
+  broken([{ ...good, unit: 'nope' }, nv], /not in coverage\.json/);
+  broken([good, { ...nv, blocker: '' }], /blocker/);
+  broken([{ ...good, boundary: { ...good.boundary, crossed: '' } }, nv], /boundary\.crossed/);
+  r = write([good, nv], { units: [...coverage.units, { id: 'api/upload', surface: 'upload', boundary: 'internet → fs', attack_class: 'files', status: 'planned' }] });
+  assert.deepEqual(r.errors, []);
+  assert.match(reviewCheck(dir, { complete: true }).errors.join('\n'), /coverage is not complete: 1 unit/);
+});
+
+test('Orchestrator and entry block route to every skill; plugin manifests agree with package.json', () => {
+  const orchestrator = fs.readFileSync(path.join(KIT, 'skills/protect/SKILL.md'), 'utf8');
+  const entry = fs.readFileSync(path.join(KIT, 'adapters/entry.md'), 'utf8');
+  for (const s of fs.readdirSync(path.join(KIT, 'skills'))) {
+    if (s !== 'protect') assert.ok(orchestrator.includes(s), `protect/SKILL.md does not mention ${s}`);
+    assert.ok(entry.includes(`skills/${s}/SKILL.md`), `entry.md does not list ${s}`);
+  }
+  const pkg = JSON.parse(fs.readFileSync(path.join(KIT, 'package.json'), 'utf8'));
+  for (const f of ['.claude-plugin/plugin.json', '.codex-plugin/plugin.json']) {
+    const m = JSON.parse(fs.readFileSync(path.join(KIT, f), 'utf8'));
+    assert.equal(m.name, pkg.name, f); assert.equal(m.version, pkg.version, f);
+  }
+  assert.equal(JSON.parse(fs.readFileSync(path.join(KIT, '.agents/plugins/marketplace.json'), 'utf8')).plugins[0].name, pkg.name);
+});
+
+test('Evals are well formed (with a should-not-trigger case)', () => {
+  const e = JSON.parse(fs.readFileSync(path.join(KIT, 'evals/cases.json'), 'utf8'));
+  const ids = new Set();
+  for (const c of e.cases) { assert.ok(c.id && !ids.has(c.id)); ids.add(c.id); assert.ok(c.prompt && c.graders.length >= 2 && c.expected, c.id); }
+  assert.ok(e.cases.some((c) => c.kind === 'negative'));
+});
+
 let failed = 0;
 for (const t of tests) {
-  try { t.fn(); console.log(`✔ ${t.name}`); }
+  try { await t.fn(); console.log(`✔ ${t.name}`); }
   catch (e) { failed++; console.log(`✖ ${t.name}\n   ${e.message.split('\n').slice(0, 12).join('\n   ')}`); }
 }
 console.log(`\n${tests.length - failed}/${tests.length} passed`);

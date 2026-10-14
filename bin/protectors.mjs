@@ -152,6 +152,9 @@ switch (cmd) {
     break;
   case 'recon': runScript('skills/protect-recon/scripts/recon.mjs', rest); break;
   case 'scan': runScript('skills/protect-scan/scripts/scan.mjs', rest); break;
+  case 'deps': runScript('skills/protect-deps/scripts/deps.mjs', rest); break;
+  case 'rule-test': runScript('skills/protect-scan/scripts/rule-test.mjs', rest); break;
+  case 'review-check': runScript('skills/protect-verify/scripts/review-check.mjs', rest); break;
   default:
     console.log(`The Protectors — autonomous security verification team for any AI coding tool
 
@@ -161,5 +164,9 @@ Commands:
   remove [dir]        uninstall (keeps .protectors/ reports)
   recon  [dir]        identify project type + per-file risk inventory → .protectors/recon.{json,md}
   scan   [dir]        security scan → .protectors/FINDINGS.md, findings.json, findings.sarif
-                      [--fail-on critical|high|medium|low|none] [--json]`);
+                      [--history] [--baseline f | --write-baseline f] [--fail-on …] [--json]
+  deps   [dir]        dependency vulnerabilities (OSV + CISA KEV + EPSS) + CycloneDX SBOM
+                      [--offline] [--exclude regex] [--prod-only] [--fail-on …]
+  rule-test <dir>     run annotated rule tests (built-in + .protectors-rules.json) [--require-coverage]
+  review-check [dir]  validate review.json + coverage.json evidence contract [--complete]`);
 }

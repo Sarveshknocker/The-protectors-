@@ -1,0 +1,35 @@
+{
+  "name": "the-protectors",
+  "version": "0.2.0",
+  "description": "Autonomous, evidence-based security review and hardening for any project.",
+  "author": {
+    "name": "Sarvesh",
+    "url": "https://github.com/Sarveshknocker"
+  },
+  "homepage": "https://github.com/Sarveshknocker/The-protectors-",
+  "repository": "https://github.com/Sarveshknocker/The-protectors-",
+  "license": "MIT",
+  "keywords": [
+    "security",
+    "appsec",
+    "devsecops",
+    "owasp",
+    "sast",
+    "hardening"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "The Protectors",
+    "shortDescription": "Secure, audit and harden any project with verified findings.",
+    "longDescription": "Recon, 135 tested scanner rules, git-history secrets, dependency audit with OSV + CISA KEV + EPSS and a CycloneDX SBOM, file-by-file review under an evidence contract (confirmed / needs validation / rejected) with a coverage ledger, platform-specific defenses and a verified report.",
+    "developerName": "Sarvesh",
+    "category": "Security",
+    "capabilities": [],
+    "websiteURL": "https://github.com/Sarveshknocker/The-protectors-",
+    "defaultPrompt": [
+      "Protect this project: full security verification and hardening.",
+      "Audit our dependencies and produce an SBOM.",
+      "Check this repository and its git history for leaked secrets."
+    ]
+  }
+}

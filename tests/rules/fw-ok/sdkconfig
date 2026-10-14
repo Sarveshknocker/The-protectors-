@@ -1,0 +1,4 @@
+# ok-file: fw.secure-boot-off, fw.flash-encryption-off, fw.insecure-sdkconfig
+CONFIG_IDF_TARGET="esp32s3"
+CONFIG_SECURE_BOOT=y
+CONFIG_SECURE_FLASH_ENC_ENABLED=y

@@ -6,7 +6,9 @@ _The Protectors · <date> · commit <sha>_
 - **What this project is:** <type(s), stack, purpose, users, sensitive data handled>
 - **Security score:** <before>/100 (grade <X>) → **<after>/100 (grade <Y>)**
 - **Findings:** <n> critical, <n> high, <n> medium, <n> low found · <n> fixed · <n> remaining
-- **Review coverage:** <reviewed>/<total> source files read manually
+- **Review coverage:** <covered>/<total> coverage units (surface × boundary × attack class) · <reviewed>/<total> source files read · partial? <yes/no and why>
+- **Dependencies:** <n> packages · <n> advisories (<n> in CISA KEV) · SBOM `.protectors/sbom.cdx.json`
+- **Needs validation:** <n> items that depend on facts outside the repository (listed in §4b, no severity)
 - **Top risk remaining:** <one sentence>
 
 ## 2. Actions for you (cannot be done safely by an AI)
@@ -25,6 +27,10 @@ Assets · entry points · trust boundaries · top threats (STRIDE). Full version
 |---|---|---|---|---|---|
 | P-001 | Critical | ✅ Fixed | `src/db/users.ts:42` | SQL injection (CWE-89, A03) | Parameterised query; test `users.sqli.test.ts` |
 | P-002 | High | ⚠️ Open | `…` | … | Needs product decision: … |
+
+## 4b. Needs validation (no severity until settled)
+| ID | Hypothesis | Missing fact | Safe way to settle it |
+|---|---|---|---|
 
 ## 5. Defense system implemented
 | Layer | Control | Files |

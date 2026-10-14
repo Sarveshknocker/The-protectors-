@@ -22,11 +22,11 @@ The user invokes you once and expects a finished, verified result. Do not stop f
 ### Phase 1 — Recon (`protect-recon` skill)
 Run the recon script → `.protectors/recon.{json,md}`. Confirm the project type by reading entry points and configs. A repo can be several types (e.g. website + API + infra); treat each.
 
-### Phase 2 — Automated scan (`protect-scan` skill)
-Run the scanner (→ `FINDINGS.md`, `findings.json`, `findings.sarif`) and every available ecosystem tool (dependency audit, etc.) listed in that skill. Save outputs in `.protectors/`. Copy `findings.json` to `findings.before.json` for the before/after comparison.
+### Phase 2 — Automated scan (`protect-deps` + `protect-scan` skills)
+Run the dependency audit first (→ `DEPENDENCIES.md`, `sbom.cdx.json`; only package names/versions leave the machine, use `--exclude`/`--offline` for confidential package names), then the scanner with `--history` (→ `FINDINGS.md`, `findings.json`, `findings.sarif`, dependency findings merged) and every available ecosystem tool listed in `protect-scan`. Save outputs in `.protectors/`. Copy `findings.json` to `findings.before.json` for the before/after comparison.
 
 ### Phase 3 — Deep manual review (`protect-deep-review` skill)
-Regex can't see broken authorization, business-logic flaws or missing validation. **Read every file** in the inventory that is source/config (skip generated/vendored), prioritising the high-risk list. Apply the review checklist and the anti-amateur checklist. Triage scanner findings: mark false positives with reasons (and add `protectors-ignore` comments only when certain). Write `.protectors/THREAT_MODEL.md` (assets, entry points, trust boundaries, top threats — STRIDE) and add manual findings to `.protectors/REVIEW.md`.
+Regex can't see broken authorization, business-logic flaws or missing validation. **Read every file** in the inventory that is source/config (skip generated/vendored), prioritising the high-risk list. Apply the review checklist and the anti-amateur checklist. Plan `.protectors/coverage.json` (surface × boundary × attack class) before reading. Triage scanner and dependency findings into `.protectors/review.json` as confirmed / needs_validation / rejected with reasons (add `protectors-ignore` comments only when certain). Reproduce critical/high candidates with local tests on dummy data and have them independently verified (`agents/finding-verifier.md`). Write `.protectors/THREAT_MODEL.md` (assets, entry points, trust boundaries, top threats — STRIDE). Follow `protect-deep-review/references/evidence-contract.md`.
 
 For large repos: split the file list into batches and use sub-agents if your tool supports them (brief: `<kit>/agents/security-reviewer.md`), otherwise work through batches sequentially and keep notes in REVIEW.md so nothing is skipped. Record coverage (files reviewed / total).
 
@@ -40,10 +40,34 @@ Open the playbook for each detected type (`protect-defense/references/<type>.md`
 Adapt templates from `protect-defense/templates/` to the project's framework, language, style and existing libraries. Prefer the project's existing libraries; add a new dependency only when it's the industry standard (helmet, zod, argon2, DOMPurify…) and note it.
 
 ### Phase 5 — Verify (`protect-verify` skill)
-Re-run scanner, run the project's lint/typecheck/tests/build. Every change must keep the build and tests green. Loop: fix → re-verify, max 5 iterations. Add tests for security-critical logic you added (validators, authz checks, SSRF/path guards).
+Re-run the dependency audit and scanner, run `review-check.mjs` (evidence contract + coverage), then the project's lint/typecheck/tests/build. Every change must keep the build and tests green. Loop: fix → re-verify, max 5 iterations. Add tests for security-critical logic you added (validators, authz checks, SSRF/path guards).
 
 ### Phase 6 — Report
 Write `.protectors/SECURITY_REPORT.md` from `protect-verify/references/report-template.md`: what the project is, before/after score, prioritised gaps (fixed / remaining), patches applied (file list), defense architecture, "Actions for you" (key rotation, history purge, cloud settings), and next steps. Summarise to the user in ≤ 15 lines with the score change.
+
+## Common rationalizations
+| Excuse | Reality |
+|---|---|
+| "The scanner found nothing, so it is secure" | Scanners miss missing controls (authz, business logic). Coverage.json shows what was actually read. |
+| "It is only in an old commit" | Anyone who clones the repository can read it. Rotate, then purge. |
+| "That dependency is only used in tests" | Dev dependencies run in CI with secrets and on developer machines. Lower priority, not zero. |
+| "I am sure it is exploitable" | Then a local test can show it. Without one it is `needs_validation`. |
+| "Best practice X is missing, so that is a high" | A checklist deviation without a crossed boundary is hardening advice, not a finding. |
+| "The proxy probably sets that header" | Not in the repository = not known. Record `needs_validation` with a plan. |
+
+## Red flags (stop and fix)
+- A report claims "complete" while coverage.json has planned, blocked or deferred units.
+- A severity on a `needs_validation` item, or a confirmed finding without evidence.
+- Any secret value in a report, log, test fixture or commit message.
+- Testing against a deployed or third-party system.
+- Weakening a control (or a test) to make the build pass.
+
+## Definition of done
+- [ ] `deps.mjs` and `scan.mjs --history` re-run after fixes; before/after in the report.
+- [ ] `review-check.mjs` passes (with `--complete`, or the report states the partial coverage and why).
+- [ ] Every fixed critical/high finding has a regression test that failed before and passes now.
+- [ ] Build, lint, typecheck and tests are green.
+- [ ] "Actions for you" lists every rotation, history purge and console setting the user must do.
 
 ## Severity model
 | Severity | Meaning | Examples |

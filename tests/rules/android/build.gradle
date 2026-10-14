@@ -1,0 +1,8 @@
+android {
+    buildTypes {
+        // ruleid: android.minify-off
+        release {
+            minifyEnabled false
+        }
+    }
+}

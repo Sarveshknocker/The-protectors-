@@ -1,7 +1,20 @@
 {
   "name": "the-protectors",
-  "version": "0.1.0",
-  "description": "Autonomous cybersecurity verification team: identifies the project type, analyses every file, builds a tailored defense system and delivers a verified security report.",
-  "author": { "name": "Sarvesh", "url": "https://github.com/Sarveshknocker" },
-  "keywords": ["security", "appsec", "devsecops", "owasp", "sast", "hardening"]
+  "version": "0.2.0",
+  "description": "Autonomous cybersecurity verification team for any AI coding assistant: identifies your project type, scans code, git history and dependencies (OSV + CISA KEV + EPSS, CycloneDX SBOM), reviews every file against an evidence contract, and builds a tailored defense system with a verified security report.",
+  "author": {
+    "name": "Sarvesh",
+    "url": "https://github.com/Sarveshknocker"
+  },
+  "keywords": [
+    "security",
+    "appsec",
+    "devsecops",
+    "owasp",
+    "sast",
+    "hardening"
+  ],
+  "repository": "https://github.com/Sarveshknocker/The-protectors-",
+  "homepage": "https://github.com/Sarveshknocker/The-protectors-",
+  "license": "MIT"
 }

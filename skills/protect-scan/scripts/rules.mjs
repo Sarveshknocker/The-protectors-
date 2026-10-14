@@ -30,12 +30,30 @@ export const SECRET_RULES = [
   { id: 'secret.sendgrid', severity: 'critical', title: 'SendGrid API key', re: /\bSG\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{43}\b/g },
   { id: 'secret.npm-token', severity: 'critical', title: 'npm access token', re: /\bnpm_[A-Za-z0-9]{36}\b/g },
   { id: 'secret.razorpay', severity: 'critical', title: 'Razorpay live key', re: /\brzp_live_[A-Za-z0-9]{14,}\b/g },
+  { id: 'secret.huggingface', severity: 'critical', title: 'Hugging Face access token', re: /\bhf_[A-Za-z0-9]{34,40}\b/g },
+  { id: 'secret.shopify', severity: 'critical', title: 'Shopify access token', re: /\bshp(at|ca|pa|ss)_[a-fA-F0-9]{32}\b/g },
+  { id: 'secret.digitalocean', severity: 'critical', title: 'DigitalOcean token', re: /\bdo[opr]_v1_[a-f0-9]{64}\b/g },
+  { id: 'secret.pypi', severity: 'critical', title: 'PyPI upload token', re: /\bpypi-AgEIcHlwaS5vcmc[A-Za-z0-9_-]{50,}/g },
+  { id: 'secret.postman', severity: 'high', title: 'Postman API key', re: /\bPMAK-[a-f0-9]{24}-[a-f0-9]{34}\b/g },
+  { id: 'secret.atlassian', severity: 'high', title: 'Atlassian API token', re: /\bATATT3[A-Za-z0-9_=-]{100,}/g },
+  { id: 'secret.telegram-bot', severity: 'high', title: 'Telegram bot token', re: /\b\d{8,10}:AA[A-Za-z0-9_-]{33}\b/g },
+  { id: 'secret.discord-webhook', severity: 'high', title: 'Discord webhook URL', re: /https:\/\/(?:ptb\.|canary\.)?discord(?:app)?\.com\/api\/webhooks\/\d+\/[\w-]{60,}/g },
+  { id: 'secret.azure-storage', severity: 'critical', title: 'Azure Storage account key in connection string', re: /AccountKey=[A-Za-z0-9+/]{86}==/g },
+  { id: 'secret.gcp-service-account', severity: 'critical', title: 'Google Cloud service-account key file', re: /"type"\s*:\s*"service_account"[\s\S]{0,400}"private_key_id"\s*:\s*"[a-f0-9]{40}"/g },
+  { id: 'secret.groq', severity: 'critical', title: 'Groq API key', re: /\bgsk_[A-Za-z0-9]{52}\b/g },
+  { id: 'secret.supabase-pat', severity: 'critical', title: 'Supabase personal access token', re: /\bsbp_[a-f0-9]{40}\b/g },
+  { id: 'secret.linear', severity: 'high', title: 'Linear API key', re: /\blin_api_[A-Za-z0-9]{40}\b/g },
+  { id: 'secret.doppler', severity: 'critical', title: 'Doppler token', re: /\bdp\.(pt|st|sa|ct)\.[A-Za-z0-9]{40,44}\b/g },
+  { id: 'secret.vault', severity: 'critical', title: 'HashiCorp Vault token', re: /\bhv[sb]\.[A-Za-z0-9_-]{90,}/g },
+  { id: 'secret.databricks', severity: 'high', title: 'Databricks token', re: /\bdapi[a-f0-9]{32}(-\d)?\b/g },
+  { id: 'secret.dockerhub', severity: 'high', title: 'Docker Hub personal access token', re: /\bdckr_pat_[A-Za-z0-9_-]{27}\b/g },
+  { id: 'secret.age', severity: 'critical', title: 'age encryption secret key', re: /\bAGE-SECRET-KEY-1[0-9A-Z]{58}\b/g },
   { id: 'secret.private-key', severity: 'critical', title: 'Private key block', re: /-----BEGIN (RSA |EC |DSA |OPENSSH |PGP |ENCRYPTED )?PRIVATE KEY( BLOCK)?-----/g },
   { id: 'secret.db-url-with-password', severity: 'high', title: 'Database URL with embedded password', re: /\b(postgres(ql)?|mysql|mongodb(\+srv)?|redis|amqp|mssql):\/\/[^\s:/"'@]+:[^\s@"'/$]{3,}@[^\s"']+/g, unless: /localhost|127\.0\.0\.1|example|user:pass|username:password|\$\{/ },
   { id: 'secret.c-define', severity: 'high', title: 'Credential hard-coded in a #define / constant (firmware)',
     re: /#define\s+\w*(PASS(WORD|WD)?|PSK|SECRET|TOKEN|API_?KEY|AUTH_?KEY)\w*\s+"(?![^"]*(your|change|example|xxx|placeholder))[^"]{6,}"|\b(const\s+)?char\s*\*?\s*\w*(pass(word)?|psk|secret|token|api_?key)\w*\s*(\[\s*\d*\s*\])?\s*=\s*"(?![^"]*(your|change|example|xxx|placeholder))[^"]{6,}"/gi },
   { id: 'secret.jwt', severity: 'medium', title: 'Hard-coded JWT', re: /\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b/g },
-  { id: 'secret.generic-assignment', severity: 'high', title: 'Hard-coded credential in assignment',
+  { id: 'secret.generic-assignment', severity: 'high', title: 'Hard-coded credential in assignment', minEntropy: 2.8,
     re: /\b(pass(word|wd)?|secret|api[_-]?key|apikey|access[_-]?token|auth[_-]?token|client[_-]?secret|private[_-]?key|jwt[_-]?secret|session[_-]?secret)\b["']?\s*[:=]\s*["'`](?![^"'`]*(\$\{|\{\{|<|%s|your|change|example|placeholder|xxx|\*\*\*|process\.env|os\.environ|getenv|dummy|test|todo|redacted))[^"'`\s]{8,}["'`]/gi },
 ];
 
@@ -58,7 +76,7 @@ export const CODE_RULES = [
 
   // ---------- XSS / client ----------
   { id: 'xss.dangerous-html', severity: 'high', cwe: 'CWE-79', owasp: 'A03', title: 'Raw HTML sink', files: /\.(m?[jt]sx?|vue|svelte|astro|html?|cshtml|py|php|erb)$/i,
-    re: /dangerouslySetInnerHTML\s*=\s*\{\{\s*__html\s*:\s*(?!DOMPurify|sanitize|purify)|\.(innerHTML|outerHTML)\s*[+]?=\s*(?!["'`][^"'`$]*["'`]\s*;?$)|\bv-html\s*=|\{@html\s|document\.write\s*\(|insertAdjacentHTML\s*\(|\|\s*safe\b|mark_safe\s*\(|@Html\.Raw\s*\(|<%==/gm,
+    re: /dangerouslySetInnerHTML\s*=\s*\{\{\s*__html\s*:\s*(?!DOMPurify|sanitize|purify)|\.(innerHTML|outerHTML)\s*[+]?=(?!\s*["'`][^"'`$]*["'`]\s*;?\s*$)|\bv-html\s*=|\{@html\s|document\.write\s*\(|insertAdjacentHTML\s*\(|\|\s*safe\b|mark_safe\s*\(|@Html\.Raw\s*\(|<%==/gm,
     fix: 'Render as text, or sanitise with DOMPurify (client) / bleach/nh3 (Python) with a strict allow-list first.' },
   { id: 'xss.open-redirect', severity: 'medium', cwe: 'CWE-601', owasp: 'A01', title: 'Redirect to user-controlled URL', files: ANY_SRC,
     re: /\b(res\.redirect|redirect|HttpResponseRedirect|Redirect)\s*\(\s*(req|request)\.(query|params|GET|args|body|form)/g, fix: 'Allow-list redirect targets or only accept relative paths starting with a single "/".' },
@@ -129,10 +147,25 @@ export const CODE_RULES = [
   { id: 'proto.pollution', severity: 'medium', cwe: 'CWE-1321', owasp: 'A08', title: 'Deep merge of request data (prototype pollution)', files: JS,
     re: /(_\.merge|_\.defaultsDeep|merge|deepmerge|Object\.assign)\(\s*[^,]+,\s*req\.(body|query)/g, fix: 'Validate with a schema first; use Object.create(null)/Map; block __proto__/constructor keys.' },
 
+  // ---------- Document rendering (HTML→PDF, headless browsers, PDF viewers) ----------
+  { id: 'doc.html-to-pdf-input', severity: 'high', cwe: 'CWE-918', owasp: 'A10', title: 'Request data rendered by a server-side HTML/PDF engine (SSRF / local file read)', files: ANY_SRC,
+    re: /\b(page\.(setContent|goto)|wkhtmltopdf|htmlToPdf|html_to_pdf|pdf\.create|pdfkit\.from_(string|url)|HTML\(\s*(string|url)\s*=|puppeteer\.\w+|generatePdf)\s*\(?\s*[^)\n]{0,40}\b(req|request)\.(body|query|params|form|args|GET|POST)/g,
+    fix: 'Render only server-side templates with escaped data; in the renderer block network and file:// access (request interception allow-list, --disable-local-file-access, JavaScript off) and run it in an isolated container without cloud metadata access.' },
+  { id: 'doc.pdfjs-eval', severity: 'high', cwe: 'CWE-94', owasp: 'A03', title: 'PDF.js allowed to evaluate code from untrusted PDFs', files: ANY_SRC,
+    re: /isEvalSupported\s*:\s*true/g, fix: 'Set isEvalSupported: false and keep pdfjs-dist ≥ 4.2.67 (CVE-2024-4367); render untrusted PDFs in a sandboxed iframe or worker.' },
+
   // ---------- Logging / privacy ----------
   { id: 'log.sensitive', severity: 'medium', cwe: 'CWE-532', owasp: 'A09', title: 'Sensitive value written to logs', files: ANY_SRC,
     re: /(console\.(log|info|debug)|logger\.\w+|logging\.\w+|print|Log\.[dive]|System\.out\.println)\s*\([^)]*\b(password|passwd|secret|token|apiKey|api_key|authorization|cardNumber|cvv|ssn)\b/gi,
     fix: 'Never log credentials/PII; use a structured logger with redaction paths.' },
+
+  // ---------- LLM / AI features (OWASP Top 10 for LLM applications) ----------
+  { id: 'llm.output-exec', severity: 'critical', cwe: 'CWE-94', owasp: 'LLM05', title: 'Model output executed as code or shell', files: ANY_SRC,
+    re: /\b(eval|exec|execSync|new\s+Function|subprocess\.(run|call|Popen)|os\.system)\s*\(\s*[^)]{0,80}\b(completion|response\.(choices|content|text|output)|choices\[0\]|output_text|llm_?(output|response|result)|generated_?code|ai_?(output|response))/gi,
+    fix: 'Never execute model output. Parse it into a structured, validated action (JSON schema) and run only allow-listed operations; sandbox anything code-like.' },
+  { id: 'llm.prompt-injection', severity: 'medium', cwe: 'CWE-1427', owasp: 'LLM01', title: 'User input concatenated into the system prompt', files: ANY_SRC,
+    re: /role["']?\s*:\s*["']system["'][^}]{0,300}(\$\{\s*(req|request)\.|["'`]\s*\+\s*(req|request)\.)|system_prompt\s*=\s*f["'][^"'\n]*\{(request|user_input|query)/gi,
+    fix: 'Keep the system prompt constant; pass user text as a separate user message, delimit it, and enforce permissions outside the model (the model is not a security boundary).' },
 
   // ---------- Electron ----------
   { id: 'electron.insecure-webprefs', severity: 'critical', cwe: 'CWE-94', owasp: 'A05', title: 'Electron: nodeIntegration on / contextIsolation off / sandbox off / webSecurity off', files: JS,
@@ -265,6 +298,19 @@ export const CONFIG_RULES = [
   // CI
   { id: 'ci.pull-request-target', severity: 'high', cwe: 'CWE-829', owasp: 'A08', title: 'GitHub Actions pull_request_target checking out PR code', files: /^\.github\/workflows\/.*\.ya?ml$/, requires: /pull_request_target/, re: /ref:\s*\$\{\{\s*github\.event\.pull_request\.head\.(sha|ref)/g, fix: 'Do not run untrusted PR code with pull_request_target secrets; use pull_request.' },
   { id: 'ci.script-injection', severity: 'high', cwe: 'CWE-78', owasp: 'A03', title: 'GitHub Actions script injection from event data', files: /^\.github\/workflows\/.*\.ya?ml$/, re: /run:[^\n]*\$\{\{\s*github\.event\.(issue|pull_request|comment|review|head_commit)\.[\w.]*(title|body|message|name|ref|label)/g, fix: 'Pass event data via env: variables and quote them in the script.' },
+  { id: 'ci.script-injection-block', severity: 'high', cwe: 'CWE-78', owasp: 'A03', title: 'GitHub Actions script injection inside a multi-line run block', files: /^\.github\/workflows\/.*\.ya?ml$/,
+    re: /^([ \t]*)(?:-[ \t]+)?run:[ \t]*[|>][-+]?[ \t]*\n(?:\1[ \t]+[^\n]*\n|[ \t]*\n)*?\1[ \t]+[^\n]*\$\{\{\s*(?:github\.event\.(?:issue|pull_request|comment|review|review_comment|discussion|pages|head_commit|commits|workflow_run)\b[\w.[\]*]*|github\.head_ref)/gm,
+    fix: 'Move the expression into env: (TITLE: ${{ github.event.issue.title }}) and use "$TITLE" quoted in the script.' },
+  { id: 'ci.env-injection', severity: 'high', cwe: 'CWE-74', owasp: 'A03', title: 'Untrusted event data written to GITHUB_ENV / GITHUB_PATH', files: /^\.github\/workflows\/.*\.ya?ml$/,
+    re: /\$\{\{\s*(github\.event\.[\w.]+|github\.head_ref)[^}]*\}\}[^\n]*>>\s*"?\$\{?GITHUB_(ENV|PATH)/g, fix: 'Never write attacker-controlled values to GITHUB_ENV/GITHUB_PATH; validate first or pass via step outputs.' },
+  { id: 'ci.self-hosted-pr', severity: 'high', cwe: 'CWE-829', owasp: 'A08', title: 'Self-hosted runner reachable from pull requests', files: /^\.github\/workflows\/.*\.ya?ml$/, requires: /^\s*pull_request(_target)?\b/m,
+    re: /runs-on:\s*\[?\s*["']?self-hosted/g, fix: 'Use GitHub-hosted (ephemeral) runners for PR workflows; restrict self-hosted runners to protected branches in a dedicated runner group.' },
+  { id: 'ci.no-permissions', severity: 'medium', cwe: 'CWE-250', owasp: 'A01', title: 'Workflow does not restrict GITHUB_TOKEN permissions', files: /^\.github\/workflows\/.*\.ya?ml$/, fileLevel: true,
+    requiresNot: /^\s*permissions:/m, re: /^(on|"on"|true):/gm, fix: 'Add top-level "permissions: contents: read" and grant writes per job only where needed.' },
+  { id: 'ci.curl-pipe-shell', severity: 'medium', cwe: 'CWE-494', owasp: 'A08', title: 'Download piped straight into a shell', files: /^\.github\/workflows\/.*\.ya?ml$|(^|\/)(Dockerfile|Containerfile)[^/]*$|\.(sh|bash)$/,
+    re: /\b(curl|wget)\b[^\n|]*\|\s*(sudo\s+)?(ba|z)?sh\b/g, fix: 'Download to a file, verify a pinned checksum or signature, then run it.' },
+  { id: 'ci.secrets-inherit', severity: 'low', cwe: 'CWE-272', owasp: 'A01', title: 'Reusable workflow inherits all secrets', files: /^\.github\/workflows\/.*\.ya?ml$/,
+    re: /^\s*secrets:\s*inherit\b/gm, fix: 'Pass only the secrets the called workflow needs.' },
   { id: 'ci.unpinned-action', severity: 'low', cwe: 'CWE-1104', owasp: 'A08', title: 'Third-party action not pinned to a commit SHA', files: /^\.github\/workflows\/.*\.ya?ml$/, re: /uses:\s*(?!actions\/|github\/|\.\/)[\w.-]+\/[\w.-]+@(?![0-9a-f]{40}\b)[\w.-]+/g, fix: 'Pin third-party actions to a full commit SHA (Dependabot keeps them updated).' },
   { id: 'ci.write-all', severity: 'medium', cwe: 'CWE-250', owasp: 'A01', title: 'Workflow token has write-all permissions', files: /^\.github\/workflows\/.*\.ya?ml$/, re: /permissions:\s*write-all/g, fix: 'Set `permissions: contents: read` at top level and grant more per job.' },
   // Next.js / web config

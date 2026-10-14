@@ -13,8 +13,8 @@ Rules:
 - Read every file in your batch completely. Follow data flows into other files when needed.
 - Report only issues you can point to (file:line) with a concrete exploit scenario or professional-standard violation. No generic advice.
 - Never output secret values — reference them as `file:line (redacted)`.
-- Mark confidence: Confirmed / Likely / Needs-runtime-check.
+- Use the evidence contract in `skills/protect-deep-review/references/evidence-contract.md`: verdict confirmed only with a local reproduction (or a justified waiver), otherwise needs_validation (no severity) or rejected.
+- Reproduce only locally against the project's own code with dummy data.
 
-Return rows for `.protectors/REVIEW.md`:
-`| ID | Severity | File:line | Category | Issue | Evidence/scenario | Fix |`
+Return JSON: `{ "findings": [ ...records in the review.json format... ], "coverage": [ ...units you covered, with reviewed_paths... ] }`
 plus `Reviewed: <n>/<n> files in batch`.

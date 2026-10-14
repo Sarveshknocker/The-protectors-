@@ -1,0 +1,13 @@
+[
+  {
+    "id": "legacy-auth-header",
+    "severity": "high",
+    "title": "Legacy X-Api-Auth header trusted for authentication",
+    "pattern": "headers\\[[\"']x-api-auth[\"']\\]",
+    "flags": "i",
+    "files": "\\.(js|ts)$",
+    "fix": "Use the session middleware; the legacy header is spoofable.",
+    "cwe": "CWE-287",
+    "owasp": "A07"
+  }
+]

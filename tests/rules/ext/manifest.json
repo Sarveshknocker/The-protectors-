@@ -1,0 +1,15 @@
+{
+  // ruleid: ext.mv2
+  "manifest_version": 2,
+  "name": "Demo",
+  // ruleid: ext.broad-host-permissions
+  "host_permissions": ["<all_urls>"],
+  // ruleid: ext.dangerous-permissions
+  "permissions": ["debugger", "storage"],
+  // ruleid: ext.weak-csp
+  "content_security_policy": { "extension_pages": "script-src 'self' 'unsafe-eval'" },
+  // ruleid: ext.externally-connectable
+  "externally_connectable": { "matches": ["*://*/*"] },
+  // ruleid: ext.web-accessible-all
+  "web_accessible_resources": [{ "resources": ["img/*"], "matches": ["<all_urls>"] }]
+}

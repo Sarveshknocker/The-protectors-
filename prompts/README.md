@@ -40,3 +40,20 @@ scanner results. Step 1: tell me which files you need to read (highest risk firs
 Step 2: review them with the checklist. Step 3: give me complete patched files one at a time.
 Step 4: write the SECURITY_REPORT. Never ask me to paste secret values.
 ```
+
+### Dependencies and SBOM
+```
+Using The Protectors (protect-deps), audit our dependencies, apply the upgrade plan where tests stay green, and give me the SBOM.
+Keep package names starting with @ourco/ local.
+```
+
+### Leaked secrets, including git history
+```
+Using The Protectors, scan this repository and its full git history for secrets. Do not print any values.
+Tell me exactly what to rotate and how to purge history; do not rewrite history yourself.
+```
+
+### Add a CI gate without fixing everything today
+```
+Using The Protectors, write a baseline of today's findings and add a CI job that fails only on new high/critical findings.
+```

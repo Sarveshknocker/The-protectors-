@@ -1,0 +1,7 @@
+services:
+  app:
+    image: acme/app:1.4.2
+    # ruleid: compose.privileged
+    privileged: true
+    # ok: compose.privileged
+    read_only: true
