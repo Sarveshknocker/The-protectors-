@@ -36,7 +36,7 @@ const SKIP_FILES = /(^|\/)(package-lock\.json|pnpm-lock\.yaml|yarn\.lock|bun\.lo
 const TEST_PATH = /(^|\/)(__tests__|__mocks__|tests?|spec|specs|fixtures?|examples?|samples?|docs?|e2e|cypress|playwright|stories)\/|\.(test|spec|stories)\.\w+$|_test\.(go|py)$/i;
 
 // The kit's own installed copies (Claude Code adapter) contain rule regexes and must not be scanned.
-const KIT_COPY = /^\.claude\/(skills\/protect(-[\w-]+)?|agents\/(recon-analyst|security-reviewer|hardening-engineer|verification-auditor)\.md)(\/|$)/;
+const KIT_COPY = /^\.claude\/(skills\/protect(ors|-[\w-]+)?|agents\/(protectors-[\w-]+|recon-analyst|security-reviewer|hardening-engineer|verification-auditor)\.md)(\/|$)/; // current + pre-0.3 names
 
 function walk(dir, acc = []) {
   let entries;

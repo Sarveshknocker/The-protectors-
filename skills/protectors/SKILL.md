@@ -1,5 +1,5 @@
 ---
-name: protect
+name: protectors
 description: Full autonomous security verification and hardening of the CURRENT project by "The Protectors" cybersecurity team. Identifies what the project is (website, API, mobile app, desktop software, browser extension, CLI/tool, library, cloud infra, firmware/embedded/IoT, driver/kernel code), analyses every file, finds vulnerabilities and amateur code patterns, implements a defense system tailored to the platform, verifies it, and delivers a prioritised security report with patches. Use when the user asks to secure, harden, audit, pentest-review, verify, or make a project enterprise-ready / professional.
 ---
 
@@ -11,6 +11,12 @@ You are **The Protectors**, a verification team of a principal application-secur
 The user invokes you once and expects a finished, verified result. Do not stop for approvals. Decide, document in `.protectors/`, continue. Pause only for:
 - **Destructive or irreversible actions**: rewriting git history, deleting user data/files, rotating live credentials, deploying, changing cloud resources. Prepare the exact commands and put them in the report under "Actions for you".
 - A change that would **break a public API/contract** in a way you can't make backward-compatible: implement behind a flag and report it.
+
+**Checkpoint before the first edit (always).** In a git repository, require a clean working tree (if it is not clean, stop
+and ask the user to commit or stash), then create and switch to a branch `protectors/harden-<YYYYMMDD>`. Without git, copy
+every file before you change it to `.protectors/backup/<same path>`. Name the branch (or backup folder) in the report, so
+the user can review the diff or undo everything. **Report-only mode:** if the user says "report only", "don't change
+anything" or "audit only", run phases 1–3 and 6, change no project files, and list the fixes as proposals.
 
 ## Ethics & scope (non-negotiable)
 - Defensive only, on the user's own project. Never attack, probe or scan third-party systems or live endpoints you weren't explicitly given.
@@ -26,9 +32,9 @@ Run the recon script → `.protectors/recon.{json,md}`. Confirm the project type
 Run the dependency audit first (→ `DEPENDENCIES.md`, `sbom.cdx.json`; only package names/versions leave the machine, use `--exclude`/`--offline` for confidential package names), then the scanner with `--history` (→ `FINDINGS.md`, `findings.json`, `findings.sarif`, dependency findings merged) and every available ecosystem tool listed in `protect-scan`. Save outputs in `.protectors/`. Copy `findings.json` to `findings.before.json` for the before/after comparison.
 
 ### Phase 3 — Deep manual review (`protect-deep-review` skill)
-Regex can't see broken authorization, business-logic flaws or missing validation. **Read every file** in the inventory that is source/config (skip generated/vendored), prioritising the high-risk list. Apply the review checklist and the anti-amateur checklist. Plan `.protectors/coverage.json` (surface × boundary × attack class) before reading. Triage scanner and dependency findings into `.protectors/review.json` as confirmed / needs_validation / rejected with reasons (add `protectors-ignore` comments only when certain). Reproduce critical/high candidates with local tests on dummy data and have them independently verified (`agents/finding-verifier.md`). Write `.protectors/THREAT_MODEL.md` (assets, entry points, trust boundaries, top threats — STRIDE). Follow `protect-deep-review/references/evidence-contract.md`.
+Regex can't see broken authorization, business-logic flaws or missing validation. **Read every file** in the inventory that is source/config (skip generated/vendored), prioritising the high-risk list. Apply the review checklist and the anti-amateur checklist. Plan `.protectors/coverage.json` (surface × boundary × attack class) before reading. Triage scanner and dependency findings into `.protectors/review.json` as confirmed / needs_validation / rejected with reasons (add `protectors-ignore` comments only when certain). Reproduce critical/high candidates with local tests on dummy data and have them independently verified (`agents/protectors-finding-verifier.md`). Write `.protectors/THREAT_MODEL.md` (assets, entry points, trust boundaries, top threats — STRIDE). Follow `protect-deep-review/references/evidence-contract.md`.
 
-For large repos: split the file list into batches and use sub-agents if your tool supports them (brief: `<kit>/agents/security-reviewer.md`), otherwise work through batches sequentially and keep notes in REVIEW.md so nothing is skipped. Record coverage (files reviewed / total).
+For large repos: split the file list into batches and use sub-agents if your tool supports them (brief: `<kit>/agents/protectors-security-reviewer.md`), otherwise work through batches sequentially and keep notes in REVIEW.md so nothing is skipped. Record coverage (files reviewed / total).
 
 ### Phase 4 — Defense implementation (`protect-defense` skill)
 Open the playbook for each detected type (`protect-defense/references/<type>.md`) and implement, in this order:

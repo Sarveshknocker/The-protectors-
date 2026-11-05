@@ -1,5 +1,5 @@
 ---
-name: verification-auditor
+name: protectors-verification-auditor
 description: Independent verifier. Re-scans, runs tests/builds, checks that each claimed fix actually closes the issue, and challenges the report before it is delivered.
 tools: Read, Grep, Glob, Bash
 ---

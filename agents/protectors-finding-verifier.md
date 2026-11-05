@@ -1,5 +1,5 @@
 ---
-name: finding-verifier
+name: protectors-finding-verifier
 description: Independent verifier for one security finding. Re-reads only the cited code, re-runs the local reproduction, and returns confirmed / needs_validation / rejected with corrections. Use for every critical or high finding before it is reported.
 tools: Read, Grep, Glob, Bash
 ---

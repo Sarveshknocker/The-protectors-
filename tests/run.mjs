@@ -305,8 +305,8 @@ test('init → update → remove round-trip keeps user content intact', () => {
   assert.equal(r.status, 0, r.stderr);
   const agents = fs.readFileSync(path.join(dir, 'AGENTS.md'), 'utf8');
   assert.match(agents, /Use pnpm\./);
-  assert.match(agents, /\.protectors-kit\/skills\/protect\/SKILL\.md/);
-  for (const f of ['CLAUDE.md', 'GEMINI.md', '.github/copilot-instructions.md', '.cursor/rules/the-protectors.mdc', '.windsurf/rules/the-protectors.md', '.clinerules/the-protectors.md', '.claude/skills/protect/SKILL.md', '.claude/agents/security-reviewer.md', '.protectors-kit/skills/protect-scan/scripts/scan.mjs']) {
+  assert.match(agents, /\.protectors-kit\/skills\/protectors\/SKILL\.md/);
+  for (const f of ['CLAUDE.md', 'GEMINI.md', '.github/copilot-instructions.md', '.cursor/rules/the-protectors.mdc', '.windsurf/rules/the-protectors.md', '.clinerules/the-protectors.md', '.claude/skills/protectors/SKILL.md', '.claude/agents/protectors-security-reviewer.md', '.protectors-kit/skills/protect-scan/scripts/scan.mjs']) {
     assert.ok(fs.existsSync(path.join(dir, f)), `missing ${f}`);
   }
   r = cli(['update', dir]);
@@ -318,7 +318,7 @@ test('init → update → remove round-trip keeps user content intact', () => {
   assert.equal(r.status, 0, r.stderr);
   assert.equal(fs.readFileSync(path.join(dir, 'AGENTS.md'), 'utf8'), '# Team rules\nUse pnpm.\n');
   assert.ok(!fs.existsSync(path.join(dir, '.protectors-kit')));
-  assert.ok(!fs.existsSync(path.join(dir, '.claude/skills/protect')));
+  assert.ok(!fs.existsSync(path.join(dir, '.claude/skills/protectors')));
   assert.ok(fs.existsSync(path.join(dir, '.protectors/SECURITY_REPORT.md')));
 });
 
@@ -330,7 +330,7 @@ test('Installed kit (all adapters) never scans its own copies; user .claude file
   assert.equal(kitHits.length, 0, JSON.stringify(kitHits.slice(0, 3), null, 1));
   assert.ok(s.findings.some((f) => f.file === '.claude/hooks/run.js' && f.rule === 'inj.eval'), 'user-owned .claude files must still be scanned');
   const r = recon(dir);
-  assert.ok(!r.inventory.some((f) => f.file.startsWith('.claude/skills/protect')));
+  assert.ok(!r.inventory.some((f) => f.file.startsWith('.claude/skills/protectors')));
 });
 
 test('Installed kit scripts run from inside the target project', () => {
@@ -592,10 +592,10 @@ test('Evidence contract: a well-formed review passes; each broken rule is caught
 });
 
 test('Orchestrator and entry block route to every skill; plugin manifests agree with package.json', () => {
-  const orchestrator = fs.readFileSync(path.join(KIT, 'skills/protect/SKILL.md'), 'utf8');
+  const orchestrator = fs.readFileSync(path.join(KIT, 'skills/protectors/SKILL.md'), 'utf8');
   const entry = fs.readFileSync(path.join(KIT, 'adapters/entry.md'), 'utf8');
   for (const s of fs.readdirSync(path.join(KIT, 'skills'))) {
-    if (s !== 'protect') assert.ok(orchestrator.includes(s), `protect/SKILL.md does not mention ${s}`);
+    if (s !== 'protectors') assert.ok(orchestrator.includes(s), `protectors/SKILL.md does not mention ${s}`);
     assert.ok(entry.includes(`skills/${s}/SKILL.md`), `entry.md does not list ${s}`);
   }
   const pkg = JSON.parse(fs.readFileSync(path.join(KIT, 'package.json'), 'utf8'));

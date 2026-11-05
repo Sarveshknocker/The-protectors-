@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0 — 2026-11-05
+Safety release, from an external review (P0 blockers).
+- **Installer can no longer delete your files.** New shared `bin/kit-installer.mjs` (the same file in all of
+  Sarvesh's kits). `--kit-dir` must be a new sub-folder of the project. A folder the kit did not create is never
+  deleted. Only paths recorded in the manifest *and* produced by this kit are removed, so a tampered manifest cannot
+  widen the delete. Existing files are never overwritten: `--force` backs them up to `<kit-dir>/backup/` and `remove`
+  restores them. Covered by `tests/installer.mjs` (10 cases, run by `npm test`).
+- **Kits no longer collide:** agents are prefixed (`protectors-security-reviewer`, …) and the orchestrator skill is
+  renamed `protect` → `protectors`. Updating an older install removes the old copies the kit owned.
+- **Checkpoint before autonomous edits:** a clean git tree and a `protectors/harden-<date>` branch (or file backups
+  without git) before the first change. New "report only" mode.
+
 ## 0.2.0 — 2026-10-14
 Upgrade informed by the leading open-source security tools (see `research/BENCHMARK.md`).
 
@@ -17,7 +29,7 @@ Upgrade informed by the leading open-source security tools (see `research/BENCHM
   (HTML→PDF renderers fed request data, PDF.js eval); GitHub Actions rules (multi-line script injection, GITHUB_ENV
   injection, self-hosted runners on PRs, missing permissions, secrets: inherit, curl|sh).
 - **`rule-test.mjs`** and `tests/rules/`: every rule has annotated must-fire / must-not-fire cases; CI requires 100%.
-- **Evidence contract**: `review.json` + `coverage.json` + `review-check.mjs` (+ `REVIEW_STATUS.md`); `finding-verifier`
+- **Evidence contract**: `review.json` + `coverage.json` + `review-check.mjs` (+ `REVIEW_STATUS.md`); `protectors-finding-verifier`
   agent; severity anchors; safe local reproduction; anti-patterns. Report template gains coverage and needs-validation sections.
 - Defense playbook: untrusted documents (PDF, HTML→PDF, Office, images).
 - Orchestrator: common rationalizations, red flags, definition of done. Evals with planted issues. Codex plugin manifests.

@@ -102,7 +102,7 @@ Suppress a confirmed false positive with a comment on or above the line (`// pro
 ## What's inside
 ```
 skills/
-  protect/              orchestrator: autonomous 6-phase workflow, severity model, ethics
+  protectors/           orchestrator: autonomous 6-phase workflow (checkpoint branch first), severity model, ethics
   protect-recon/        project-type detection + per-file risk inventory        (scripts/recon.mjs)
   protect-scan/         135 tested rules, git history, baseline, custom rules → Markdown/JSON/SARIF
                         (scripts/scan.mjs, rules.mjs, rule-test.mjs)
@@ -111,7 +111,7 @@ skills/
   protect-defense/      9 platform playbooks + production templates (Node, Next.js, FastAPI, Django,
                         Electron, MV3 extension, Android, Docker, nginx/WAF, CI, firmware, Linux & Windows drivers)
   protect-verify/       verification loop, evidence checker (scripts/review-check.mjs), SECURITY_REPORT template
-agents/                 recon-analyst, security-reviewer, finding-verifier, hardening-engineer, verification-auditor
+agents/                 protectors-recon-analyst, -security-reviewer, -finding-verifier, -hardening-engineer, -verification-auditor
 evals/                  with-kit vs baseline cases with planted issues and graders
 research/BENCHMARK.md   what we learned from the leading open-source security tools
 adapters/entry.md       instruction block written into each AI tool's file

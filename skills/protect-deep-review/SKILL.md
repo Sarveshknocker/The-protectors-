@@ -23,7 +23,7 @@ names a real trust boundary that is crossed and shows the evidence.
    before calling them confirmed. Keep the test: after the fix it becomes the regression test.
    If the deciding fact is outside the repository, record `needs_validation` with the blocker and a safe plan.
 5. **Verify independently.** For critical/high confirmed findings, have a fresh reviewer (sub-agent with
-   `agents/finding-verifier.md`, or a separate pass of your own that re-reads only the cited lines) confirm the trace and the
+   `agents/protectors-finding-verifier.md`, or a separate pass of your own that re-reads only the cited lines) confirm the trace and the
    evidence before the finding is reported.
 6. **Professionalism.** Apply `references/anti-amateur.md` across the codebase; these are hardening items, not
    vulnerabilities, unless they cross a boundary.

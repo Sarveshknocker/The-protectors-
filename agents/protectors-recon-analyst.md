@@ -1,5 +1,5 @@
 ---
-name: recon-analyst
+name: protectors-recon-analyst
 description: Read-only reconnaissance for The Protectors. Determines what a project is (website/API/mobile/desktop/extension/CLI/library/cloud), maps entry points, trust boundaries and sensitive data, and drafts the threat model.
 tools: Read, Grep, Glob, Bash
 ---

@@ -1,6 +1,6 @@
 {
   "name": "the-protectors",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "repository": "github:Sarveshknocker/The-protectors-",
   "description": "Autonomous cybersecurity verification team for any AI coding assistant: identifies your project type, scans code, git history and dependencies (OSV + CISA KEV + EPSS, CycloneDX SBOM), reviews every file against an evidence contract, and builds a tailored defense system with a verified security report.",
   "type": "module",
@@ -23,7 +23,7 @@
     "node": ">=18"
   },
   "scripts": {
-    "test": "node tests/run.mjs",
+    "test": "node tests/run.mjs && node tests/installer.mjs",
     "test:rules": "node skills/protect-scan/scripts/rule-test.mjs tests/rules --require-coverage"
   },
   "keywords": [

@@ -4,7 +4,7 @@ This project has **The Protectors** security kit installed at `{{KIT}}/`. Works 
 
 | Task | Open and follow |
 |---|---|
-| Full autonomous verification + hardening (end to end) | `{{KIT}}/skills/protect/SKILL.md` |
+| Full autonomous verification + hardening (end to end) | `{{KIT}}/skills/protectors/SKILL.md` |
 | Identify project type & attack surface | `{{KIT}}/skills/protect-recon/SKILL.md` |
 | Dependency vulnerabilities, malicious packages, SBOM | `{{KIT}}/skills/protect-deps/SKILL.md` |
 | Automated scanning (secrets incl. git history, injection, misconfig, CI, LLM) | `{{KIT}}/skills/protect-scan/SKILL.md` |
@@ -15,7 +15,7 @@ This project has **The Protectors** security kit installed at `{{KIT}}/`. Works 
 Sub-agent role briefs (if your tool supports sub-agents): `{{KIT}}/agents/`.
 Scripts are dependency-free Node ≥ 18: run them with your terminal tool (or ask the user to run them).
 
-**Mode: autonomous.** One request should produce a finished, verified result: recon → scan → deep review → defenses → verify → report in `.protectors/SECURITY_REPORT.md`. Don't stop for approvals; pause only for destructive/outward actions (history rewrites, credential rotation, deploys), which go in the report as "Actions for you".
+**Mode: autonomous.** One request should produce a finished, verified result: recon → scan → deep review → defenses → verify → report in `.protectors/SECURITY_REPORT.md`. Don't stop for approvals; pause only for destructive/outward actions (history rewrites, credential rotation, deploys), which go in the report as "Actions for you". Before the first edit, checkpoint: clean git tree + branch `protectors/harden-<date>` (or back up files to `.protectors/backup/` without git). "Report only" means change nothing.
 
 Hard rules, always:
 1. Defensive work on this project only; never probe third-party or production systems.

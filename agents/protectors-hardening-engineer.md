@@ -1,5 +1,5 @@
 ---
-name: hardening-engineer
+name: protectors-hardening-engineer
 description: Implements security fixes and defense layers in the project's own stack and style (headers/CSP, validation, rate limiting, authz, secure config, platform hardening, CI security), with tests. Use after findings are triaged.
 tools: Read, Grep, Glob, Bash, Edit, Write
 ---

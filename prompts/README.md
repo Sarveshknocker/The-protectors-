@@ -9,7 +9,7 @@ then attach `.protectors/recon.md`, `.protectors/FINDINGS.md` and the SKILL.md f
 
 ### 1. Full protection (autonomous, end to end)
 ```
-Protect this project using The Protectors (.protectors-kit/skills/protect/SKILL.md).
+Protect this project using The Protectors (.protectors-kit/skills/protectors/SKILL.md).
 Identify what it is, analyse every file, fix the vulnerabilities, build the defense system for this
 platform, verify everything and give me the security report. Work autonomously.
 ```

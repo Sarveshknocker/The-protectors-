@@ -1,5 +1,5 @@
 ---
-name: security-reviewer
+name: protectors-security-reviewer
 description: Manual secure-code reviewer for a batch of files. Finds authorization gaps, injection, validation holes, secrets, crypto misuse, business-logic flaws and amateur code patterns that scanners miss. Use in parallel over file batches for large repositories.
 tools: Read, Grep, Glob, Bash
 ---
