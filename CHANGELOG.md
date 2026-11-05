@@ -6,7 +6,7 @@ Safety release, from an external review (P0 blockers).
   Sarvesh's kits). `--kit-dir` must be a new sub-folder of the project. A folder the kit did not create is never
   deleted. Only paths recorded in the manifest *and* produced by this kit are removed, so a tampered manifest cannot
   widen the delete. Existing files are never overwritten: `--force` backs them up to `<kit-dir>/backup/` and `remove`
-  restores them. Covered by `tests/installer.mjs` (10 cases, run by `npm test`).
+  restores them. Covered by `tests/installer.mjs` (11 cases, run by `npm test`).
 - **Kits no longer collide:** agents are prefixed (`protectors-security-reviewer`, …) and the orchestrator skill is
   renamed `protect` → `protectors`. Updating an older install removes the old copies the kit owned.
 - **Checkpoint before autonomous edits:** a clean git tree and a `protectors/harden-<date>` branch (or file backups
