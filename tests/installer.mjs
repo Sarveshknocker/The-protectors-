@@ -173,6 +173,15 @@ test('agent names carry the kit prefix so kits cannot collide', () => {
   }
 });
 
+test('CLI scripts detect "run directly" by real path (macOS /var symlinks, Windows 8.3 short names)', () => {
+  // `import.meta.url === pathToFileURL(argv[1])` silently does nothing when the script is reached through a symlink or
+  // a short name, which is how macOS and Windows CI runners spell their temp folders.
+  const bad = [];
+  const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) { if (e.name !== 'node_modules') walk(p); } else if (p.endsWith('.mjs')) { const s = read(p); if (/process\.argv\[1\][^\n]*===|===[^\n]*process\.argv\[1\]/.test(s) && !/realPath\(process\.argv\[1\]\)/.test(s)) bad.push(path.relative(ROOT, p)); } } };
+  walk(path.join(ROOT, 'skills'));
+  assert.deepEqual(bad, [], 'use the realPath() entry check');
+});
+
 let failed = 0;
 for (const t of tests) {
   try { await t.fn(); console.log(`✔ installer: ${t.name}`); }

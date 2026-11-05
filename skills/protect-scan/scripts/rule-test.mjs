@@ -16,6 +16,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { realpathSync } from 'node:fs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 
@@ -89,7 +90,9 @@ export function runCorpus(corpus, { requireCoverage = false } = {}) {
   return { rules: ids.length, covered: ids.length - uncovered.length, uncovered, expectations: expectations.length, perRule: Object.fromEntries(perRule), failures };
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+// Run as a CLI? Compare real paths: macOS temp dirs are symlinks (/var → /private/var), Windows has 8.3 short names.
+const realPath = (p) => { try { return realpathSync.native(p); } catch { return path.resolve(p); } };
+if (process.argv[1] && realPath(process.argv[1]).toLowerCase() === realPath(fileURLToPath(import.meta.url)).toLowerCase()) {
   const args = process.argv.slice(2);
   const corpus = args.find((a) => !a.startsWith('--'));
   if (!corpus) { console.error('usage: rule-test.mjs <corpusDir> [--require-coverage] [--json]'); process.exit(2); }

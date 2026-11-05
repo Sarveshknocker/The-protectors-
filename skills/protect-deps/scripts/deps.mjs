@@ -13,8 +13,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { findLockfiles, parseLockfile, purl } from './lockfiles.mjs';
+import { realpathSync } from 'node:fs';
 
 const OSV = () => process.env.PROTECTORS_OSV_API ?? 'https://api.osv.dev/v1';
 const KEV = () => process.env.PROTECTORS_KEV_URL ?? 'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json';
@@ -279,7 +280,9 @@ Only package names and versions are sent to OSV.dev; use \`--exclude '^@yourco/'
 `;
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+// Run as a CLI? Compare real paths: macOS temp dirs are symlinks (/var → /private/var), Windows has 8.3 short names.
+const realPath = (p) => { try { return realpathSync.native(p); } catch { return path.resolve(p); } };
+if (process.argv[1] && realPath(process.argv[1]).toLowerCase() === realPath(fileURLToPath(import.meta.url)).toLowerCase()) {
   const args = process.argv.slice(2);
   const opt = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
   const root = path.resolve(args.find((a, i) => !a.startsWith('--') && !args[i - 1]?.match(/^--(out|exclude|fail-on)$/)) ?? process.cwd());
