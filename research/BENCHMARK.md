@@ -17,7 +17,7 @@ GitHub API at the time. Only ideas were taken; all code here is original (see [C
 | [blacklanternsecurity/bbot](https://github.com/blacklanternsecurity/bbot) | ~10.7k | AGPL-3.0 | Recursive internet attack-surface discovery | Not integrated: this kit reviews code and never probes live systems. The README points users to run such tools themselves against domains they own |
 
 ## Measured
-- Rule corpus: 135/135 rules covered, 150/150 planted issues detected, 0 false positives on 113 safe twins (it found and
+- Rule corpus: 137/137 rules covered, 158/158 planted issues detected, 0 false positives on 119 safe twins (it found and
   fixed a real false positive in the existing XSS rule: `el.innerHTML = '<b>static</b>'` was flagged).
 - Dependency audit on a sample project (Django 2.2.0, PyYAML 5.3, lodash 4.17.15, minimist 0.0.8) against live OSV,
   CISA KEV and EPSS: 51 advisories after merging duplicate ids (87 before), one upgrade target per package, ~6 s.
