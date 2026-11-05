@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.1 — 2026-11-05
+Scanner fixes from an external review. On the reviewer's 14-bug test app it now finds 13 (was 11); the remaining one,
+an IDOR, is left to manual review by design.
+- **R-1:** Python `requests.get(u, verify=False)` was also reported as "JWT verification disabled" (critical). The bare
+  `verify=False` alternative is removed from the JWT rule; `tls.verification-disabled` covers it.
+- **R-2:** `pull_request_target` checking out PR code was missed when `ref` was quoted, written as a flow mapping
+  (`with: { ref: "${{ … }}" }`), or used `github.head_ref`.
+- **R-3:** new `auth.weak-secret-constant`. `JWT_SECRET = "secret"` (or `SECRET_KEY`, session/signing/cookie secrets)
+  as a short literal was missed, because `jwt.sign(x, JWT_SECRET)` hides the literal.
+- **R-4:** new `xss.server-reflected`. Express `res.send('<h1>' + req.query.x)` / template literals, and Flask
+  `return f"<…{request.args…}"`.
+- **R-5:** `node-serialize` was reported at the import line; it is now reported at the `unserialize(...)` call.
+- **R-6:** the README says plainly what the scanner cannot see (data flow, IDOR, business logic) and to pair it with
+  Semgrep/CodeQL and gitleaks.
+- Corpus: 137/137 rules covered, 158/158 planted cases detected, 0/119 false positives.
+
 ## 0.3.0 — 2026-11-05
 Safety release, from an external review (P0 blockers).
 - **Installer can no longer delete your files.** New shared `bin/kit-installer.mjs` (the same file in all of

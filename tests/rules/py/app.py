@@ -34,6 +34,7 @@ def run(user_code, cmd, name, tpl, data, token, url, llm_output, user_input):
     # ruleid: auth.jwt-none-or-noverify
     jwt.decode(token, verify=False)
     # ruleid: tls.verification-disabled
+    # ok: auth.jwt-none-or-noverify
     requests.get(url, verify=False, timeout=5)
     # ok: tls.verification-disabled
     requests.get(url, timeout=5)
@@ -61,3 +62,18 @@ def run(user_code, cmd, name, tpl, data, token, url, llm_output, user_input):
 @csrf_exempt
 def webhook(req):
     return None
+
+# ruleid: auth.weak-secret-constant
+JWT_SECRET = "secret"
+# ok: auth.weak-secret-constant
+JWT_SECRET_FROM_ENV = os.environ["JWT_SECRET"]
+
+
+def hello():
+    # ruleid: xss.server-reflected
+    return f"<h1>Hi {request.args.get('name')}</h1>"
+
+
+def hello_escaped():
+    # ok: xss.server-reflected
+    return f"<h1>Hi {escape(request.args.get('name'))}</h1>"

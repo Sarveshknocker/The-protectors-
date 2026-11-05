@@ -78,6 +78,10 @@ export const CODE_RULES = [
   { id: 'xss.dangerous-html', severity: 'high', cwe: 'CWE-79', owasp: 'A03', title: 'Raw HTML sink', files: /\.(m?[jt]sx?|vue|svelte|astro|html?|cshtml|py|php|erb)$/i,
     re: /dangerouslySetInnerHTML\s*=\s*\{\{\s*__html\s*:\s*(?!DOMPurify|sanitize|purify)|\.(innerHTML|outerHTML)\s*[+]?=(?!\s*["'`][^"'`$]*["'`]\s*;?\s*$)|\bv-html\s*=|\{@html\s|document\.write\s*\(|insertAdjacentHTML\s*\(|\|\s*safe\b|mark_safe\s*\(|@Html\.Raw\s*\(|<%==/gm,
     fix: 'Render as text, or sanitise with DOMPurify (client) / bleach/nh3 (Python) with a strict allow-list first.' },
+  // Server-side reflection: request data concatenated or interpolated into an HTML response.
+  { id: 'xss.server-reflected', severity: 'high', cwe: 'CWE-79', owasp: 'A03', title: 'Request data reflected into an HTML response', files: /\.(m?[jt]sx?|cjs|py)$/i,
+    re: /\bres\.(send|write|end)\([^)\n]*<[a-z][^)\n]*(\+\s*req\.(query|body|params)|\$\{\s*req\.(query|body|params))|return\s+f["'][^"'\n]*<[a-z][^"'\n]*\{\s*request\.(args|form|values|json)/gi,
+    fix: 'Return JSON, or render through an auto-escaping template (React, Jinja2, EJS <%= %>); escape anything placed into HTML.' },
   { id: 'xss.open-redirect', severity: 'medium', cwe: 'CWE-601', owasp: 'A01', title: 'Redirect to user-controlled URL', files: ANY_SRC,
     re: /\b(res\.redirect|redirect|HttpResponseRedirect|Redirect)\s*\(\s*(req|request)\.(query|params|GET|args|body|form)/g, fix: 'Allow-list redirect targets or only accept relative paths starting with a single "/".' },
   { id: 'xss.postmessage-any-origin', severity: 'high', cwe: 'CWE-346', owasp: 'A01', title: 'postMessage without origin check / to "*"', files: JS,
@@ -100,10 +104,15 @@ export const CODE_RULES = [
 
   // ---------- Auth / session ----------
   { id: 'auth.jwt-none-or-noverify', severity: 'critical', cwe: 'CWE-347', owasp: 'A02', title: 'JWT verification disabled or "none" allowed', files: ANY_SRC,
-    re: /algorithms\s*[:=]\s*\[[^\]]*["']none["']|verify\s*=\s*False|options\s*=\s*\{\s*["']verify_signature["']\s*:\s*False|jwt\.decode\([^)]*verify\s*=\s*False|ignoreExpiration\s*:\s*true|\.decode\(\s*token\s*\)(?![\s\S]{0,40}verify)/g,
+    // No bare `verify=False`: that is requests' TLS flag (tls.verification-disabled), not JWT.
+    re: /algorithms\s*[:=]\s*\[[^\]]*["']none["']|options\s*=\s*\{\s*["']verify_signature["']\s*:\s*False|jwt\.decode\([^)]*verify\s*=\s*False|ignoreExpiration\s*:\s*true|\.decode\(\s*token\s*\)(?![\s\S]{0,40}verify)/g,
     fix: 'Always jwt.verify with an explicit algorithms allow-list (e.g. ["RS256"]), audience, issuer and expiry.' },
   { id: 'auth.jwt-weak-secret', severity: 'high', cwe: 'CWE-798', owasp: 'A02', title: 'JWT signed with a literal secret', files: ANY_SRC,
     re: /jwt\.sign\([^,]+,\s*["'][^"']{1,64}["']|jwt\.encode\([^,]+,\s*["'][^"']{1,64}["']/g, fix: 'Load a ≥ 256-bit secret from the environment/secret manager, or use asymmetric keys (RS256/EdDSA).' },
+  // `JWT_SECRET = "secret"` then jwt.sign(x, JWT_SECRET): the literal is in a constant, so the rule above cannot see it.
+  { id: 'auth.weak-secret-constant', severity: 'high', cwe: 'CWE-798', owasp: 'A02', title: 'Signing/session secret is a short literal', files: ANY_SRC,
+    re: /\b(?:jwt|token|session|signing|cookie|auth|hmac|app)[_-]?secret(?:[_-]?key)?\b["']?\s*[:=]\s*["'][^"'\s]{1,32}["']|\bsecret[_-]?key\b["']?\s*[:=]\s*["'][^"'\s]{1,32}["']/gi,
+    fix: 'Load a random ≥ 256-bit secret from the environment or a secret manager; rotate this one, it is in the repository.' },
   { id: 'auth.insecure-cookie', severity: 'medium', cwe: 'CWE-614', owasp: 'A05', title: 'Cookie without Secure/HttpOnly/SameSite', files: ANY_SRC,
     re: /(httpOnly|httponly|HttpOnly)\s*[:=]\s*(false|False)|(secure|Secure)\s*[:=]\s*(false|False)\b|SESSION_COOKIE_SECURE\s*=\s*False|CSRF_COOKIE_SECURE\s*=\s*False|sameSite\s*:\s*["']none["'](?![^}]*secure\s*:\s*true)/g,
     fix: 'Set HttpOnly, Secure, SameSite=Lax (or Strict), and a __Host- prefix for session cookies.' },
@@ -138,7 +147,7 @@ export const CODE_RULES = [
     re: /\b(fetch|axios\.(get|post)|got|request|requests\.(get|post)|urlopen|http\.Get|HttpClient\.\w+Async|file_get_contents|curl_init)\s*\(\s*(req|request)\.(query|body|params|GET|args|form)/g,
     fix: 'Allow-list hosts/schemes, resolve DNS and block private/link-local ranges (169.254.169.254), disable redirects.' },
   { id: 'deser.unsafe', severity: 'critical', cwe: 'CWE-502', owasp: 'A08', title: 'Unsafe deserialisation', files: ANY_SRC,
-    re: /pickle\.loads?\(|cPickle\.loads?\(|yaml\.load\((?![^)]*Loader\s*=\s*(yaml\.)?SafeLoader)|yaml\.unsafe_load|marshal\.loads|jsonpickle\.decode|ObjectInputStream\(|BinaryFormatter|unserialize\(\s*\$|Marshal\.load|node-serialize|serialize-javascript.*unsafe|TypeNameHandling\.(All|Auto|Objects)/g,
+    re: /pickle\.loads?\(|cPickle\.loads?\(|yaml\.load\((?![^)]*Loader\s*=\s*(yaml\.)?SafeLoader)|yaml\.unsafe_load|marshal\.loads|jsonpickle\.decode|ObjectInputStream\(|BinaryFormatter|unserialize\(\s*\$|Marshal\.load|\.unserialize\s*\(|serialize-javascript.*unsafe|TypeNameHandling\.(All|Auto|Objects)/g,
     fix: 'Use JSON with schema validation; yaml.safe_load; never deserialise untrusted binary formats.' },
   { id: 'upload.unrestricted', severity: 'medium', cwe: 'CWE-434', owasp: 'A04', title: 'File upload without size/type limits', files: JS,
     re: /multer\(\s*\{(?![^}]*(limits|fileFilter))[^}]*\}\s*\)|multer\(\s*\)/g, fix: 'Set limits.fileSize, a MIME/extension allow-list via fileFilter, store outside web root with random names, scan if possible.' },
@@ -296,7 +305,7 @@ export const CONFIG_RULES = [
   { id: 'tf.public-bucket', severity: 'high', cwe: 'CWE-732', owasp: 'A01', title: 'Public storage bucket', files: /\.tf$/, re: /acl\s*=\s*"public-read(-write)?"|block_public_acls\s*=\s*false|block_public_policy\s*=\s*false|allow_blob_public_access\s*=\s*true|public_access_prevention\s*=\s*"inherited"/g, fix: 'Block public access; serve public assets through a CDN with origin access control.' },
   { id: 'tf.unencrypted', severity: 'medium', cwe: 'CWE-311', owasp: 'A02', title: 'Storage without encryption', files: /\.tf$/, re: /storage_encrypted\s*=\s*false|encrypted\s*=\s*false|enable_encryption\s*=\s*false/g, fix: 'Enable encryption at rest with a managed KMS key.' },
   // CI
-  { id: 'ci.pull-request-target', severity: 'high', cwe: 'CWE-829', owasp: 'A08', title: 'GitHub Actions pull_request_target checking out PR code', files: /^\.github\/workflows\/.*\.ya?ml$/, requires: /pull_request_target/, re: /ref:\s*\$\{\{\s*github\.event\.pull_request\.head\.(sha|ref)/g, fix: 'Do not run untrusted PR code with pull_request_target secrets; use pull_request.' },
+  { id: 'ci.pull-request-target', severity: 'high', cwe: 'CWE-829', owasp: 'A08', title: 'GitHub Actions pull_request_target checking out PR code', files: /^\.github\/workflows\/.*\.ya?ml$/, requires: /pull_request_target/, re: /ref:\s*["']?\$\{\{\s*(github\.event\.pull_request\.head\.(sha|ref)|github\.head_ref)/g, fix: 'Do not run untrusted PR code with pull_request_target secrets; use pull_request.' },
   { id: 'ci.script-injection', severity: 'high', cwe: 'CWE-78', owasp: 'A03', title: 'GitHub Actions script injection from event data', files: /^\.github\/workflows\/.*\.ya?ml$/, re: /run:[^\n]*\$\{\{\s*github\.event\.(issue|pull_request|comment|review|head_commit)\.[\w.]*(title|body|message|name|ref|label)/g, fix: 'Pass event data via env: variables and quote them in the script.' },
   { id: 'ci.script-injection-block', severity: 'high', cwe: 'CWE-78', owasp: 'A03', title: 'GitHub Actions script injection inside a multi-line run block', files: /^\.github\/workflows\/.*\.ya?ml$/,
     re: /^([ \t]*)(?:-[ \t]+)?run:[ \t]*[|>][-+]?[ \t]*\n(?:\1[ \t]+[^\n]*\n|[ \t]*\n)*?\1[ \t]+[^\n]*\$\{\{\s*(?:github\.event\.(?:issue|pull_request|comment|review|review_comment|discussion|pages|head_commit|commits|workflow_run)\b[\w.[\]*]*|github\.head_ref)/gm,

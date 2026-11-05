@@ -197,3 +197,18 @@ const pdf2 = await page.setContent(renderInvoice(sanitize(order)));
 
 // ruleid: doc.pdfjs-eval
 const viewer = pdfjsLib.getDocument({ url: uploadUrl, isEvalSupported: true });
+
+// ruleid: xss.server-reflected
+app.get('/hello', (req, res) => res.send('<h1>Hi ' + req.query.name + '</h1>'));
+// ruleid: xss.server-reflected
+app.get('/q', (req, res) => res.send(`<div>${req.query.q}</div>`));
+// ok: xss.server-reflected
+app.get('/j', (req, res) => res.json({ q: req.query.q }));
+// ruleid: auth.weak-secret-constant
+const JWT_SECRET = "secret";
+// ok: auth.weak-secret-constant
+const JWT_SECRET_FROM_ENV = process.env.JWT_SECRET;
+// ok: deser.unsafe
+const serialize = require('node-serialize');
+// ruleid: deser.unsafe
+const session = serialize.unserialize(req.body.data);

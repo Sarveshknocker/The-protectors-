@@ -1,0 +1,12 @@
+on: pull_request_target
+jobs:
+  t:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
+        # ruleid: ci.pull-request-target
+        with: { ref: "${{ github.event.pull_request.head.sha }}" }
+      - uses: actions/checkout@0123456789abcdef0123456789abcdef01234567
+        with:
+          # ruleid: ci.pull-request-target
+          ref: '${{ github.head_ref }}'
