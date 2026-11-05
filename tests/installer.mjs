@@ -127,6 +127,30 @@ test('installs made by older kit versions (no ownership list) update and remove 
   assert.ok(!fs.existsSync(path.join(dir, firstAgent ?? firstSkill)));
 });
 
+test('copies under names used by older versions are removed only when they are provably this kit’s', () => {
+  const pairs = Object.entries(info.legacyPaths);
+  if (!pairs.length && !info.legacyMarkers.length) return;
+  const dir = tmp();
+  assert.equal(run('init', dir).status, 0);
+  const mf = manifestOf(dir); const m = JSON.parse(read(mf));
+  fs.writeFileSync(mf, JSON.stringify({ version: '0.2.0', kitDir: m.kitDir, tools: m.tools }));
+  // Recreate what an old install left behind, plus one foreign file that happens to use an old name.
+  const foreign = pairs.find(([, now]) => now.startsWith('.claude/agents/'))?.[0];
+  for (const [old, now] of pairs) {
+    const src = path.join(dir, now);
+    if (old === foreign) write(path.join(dir, old), '---\nname: x\ndescription: somebody else’s agent\n---\n');
+    else if (fs.existsSync(src)) fs.cpSync(src, path.join(dir, old), { recursive: true });
+  }
+  for (const mk of info.legacyMarkers) fs.appendFileSync(path.join(dir, 'AGENTS.md'), `\n<!-- ${mk}:start -->\nold block\n<!-- ${mk}:end -->\n`);
+  const r = run('update', dir); assert.equal(r.status, 0, r.stderr);
+  for (const [old] of pairs) {
+    if (old === foreign) assert.ok(fs.existsSync(path.join(dir, old)), `deleted a foreign file at ${old}`);
+    else assert.ok(!fs.existsSync(path.join(dir, old)), `old copy ${old} was left behind`);
+  }
+  for (const mk of info.legacyMarkers) assert.doesNotMatch(read(path.join(dir, 'AGENTS.md')), new RegExp(`${mk}:start`));
+  assert.match(read(path.join(dir, 'AGENTS.md')), new RegExp(`${info.marker}:start`));
+});
+
 test('--tools limits what is written, and update/remove without an install change nothing', () => {
   const dir = tmp();
   assert.equal(run('update', dir).status, 1);

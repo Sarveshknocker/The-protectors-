@@ -19,7 +19,10 @@ const die = (msg, code = 2) => { console.error(`✖ ${msg}`); process.exit(code)
 const posix = (p) => p.split(path.sep).join('/');
 
 /**
- * cfg: { id, name, marker, kitDir, parts, ruleFile, description, next, kept, kitSrc, agentPrefix, claudeBlock? }
+ * cfg: { id, name, marker, kitDir, parts, ruleFile, description, next, kept, kitSrc, agentPrefix,
+ *        claudeBlock?, legacyMarkers?: [old marker], legacyPaths?: { 'old/path': 'current/path it became' } }
+ * Legacy paths (names used by older kit versions) are removed on update/remove only when they are provably this kit's:
+ * same frontmatter description as the item they became, or content that points into this kit's folder.
  * Returns true when `cmd` was an installer command (init, update, remove, kit-info).
  */
 export function installerCommand(cfg, cmd, argv) {
@@ -29,7 +32,7 @@ export function installerCommand(cfg, cmd, argv) {
   const positional = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]));
   const target = path.resolve(positional[0] ?? process.cwd());
   const k = kit(cfg);
-  if (cmd === 'kit-info') { console.log(JSON.stringify({ id: cfg.id, kitDir: cfg.kitDir, agentPrefix: cfg.agentPrefix, tools: Object.keys(k.tools), owned: k.ownedPaths(Object.keys(k.tools)) }, null, 2)); return true; }
+  if (cmd === 'kit-info') { console.log(JSON.stringify({ id: cfg.id, kitDir: cfg.kitDir, agentPrefix: cfg.agentPrefix, legacyPaths: cfg.legacyPaths ?? {}, legacyMarkers: cfg.legacyMarkers ?? [], marker: cfg.marker, tools: Object.keys(k.tools), owned: k.ownedPaths(Object.keys(k.tools)) }, null, 2)); return true; }
   if (cmd === 'init') k.install(target, { tools: k.resolveTools(flag('--tools', 'all')), kitDir: flag('--kit-dir', cfg.kitDir), force: argv.includes('--force') });
   if (cmd === 'update') {
     const found = k.findInstall(target, flag('--kit-dir', null));
@@ -115,13 +118,35 @@ function kit(cfg) {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, next);
   }
-  function removeBlock(file) {
+  function removeBlock(file, marker = cfg.marker) {
     if (!fs.existsSync(file)) return false;
     const prev = fs.readFileSync(file, 'utf8');
-    const next = prev.replace(new RegExp(`\\n*${START}[\\s\\S]*?${END}\\n?`), '\n');
+    const next = prev.replace(new RegExp(`\\n*<!-- ${marker}:start -->[\\s\\S]*?<!-- ${marker}:end -->\\n?`), '\n');
     if (next === prev) return false;
     next.trim() ? fs.writeFileSync(file, next.replace(/^\n+/, '').replace(/\n+$/, '\n')) : fs.rmSync(file);
     return true;
+  }
+
+  // Older kit versions used other names. Remove those copies only when they are provably ours.
+  const descriptionOf = (p) => {
+    const file = fs.existsSync(p) && fs.statSync(p).isDirectory() ? path.join(p, 'SKILL.md') : p;
+    try { return fs.readFileSync(file, 'utf8').match(/^description:\s*(.+)$/m)?.[1].trim() ?? null; } catch { return null; }
+  };
+  function cleanupLegacy(root, kitRel) {
+    for (const marker of cfg.legacyMarkers ?? []) {
+      for (const t of Object.values(tools)) if (t.block && removeBlock(path.join(root, t.file), marker)) console.log(`  - old ${marker} block removed from ${t.file}`);
+    }
+    const current = sources(Object.keys(tools));
+    for (const [oldRel, newRel] of Object.entries(cfg.legacyPaths ?? {})) {
+      const p = inside(root, oldRel, 'legacy path');
+      if (!fs.existsSync(p) || current.has(oldRel)) continue;
+      const src = current.get(newRel);
+      const sameDescription = src?.from && descriptionOf(p) !== null && descriptionOf(p) === descriptionOf(src.from);
+      let pointsHere = false;
+      try { pointsHere = fs.statSync(p).isFile() && fs.readFileSync(p, 'utf8').includes(`${kitRel}/skills/`); } catch {}
+      if (sameDescription || pointsHere) { fs.rmSync(p, { recursive: true, force: true }); console.log(`  - old copy ${oldRel} (now ${newRel})`); }
+      else console.log(`  ? kept ${oldRel}: it does not look like ${cfg.name}'s old copy`);
+    }
   }
 
   function resolveTools(spec) {
@@ -170,6 +195,7 @@ function kit(cfg) {
 
     // Paths a previous install owned that this one no longer produces (renamed skills, dropped tools): clean up.
     for (const rel of prevOwned) if (!plan.has(rel)) fs.rmSync(inside(root, rel, 'manifest path'), { recursive: true, force: true });
+    if (prevManifest) cleanupLegacy(root, kitRel);
 
     const version = readJSON(path.join(cfg.kitSrc, 'package.json'))?.version ?? '0.0.0';
     const entry = fs.readFileSync(path.join(cfg.kitSrc, 'adapters', 'entry.md'), 'utf8').replaceAll('{{KIT}}', kitRel);
@@ -217,6 +243,7 @@ function kit(cfg) {
       const b = path.join(abs, 'backup', rel);
       if (fs.existsSync(b)) { copyAny(b, inside(root, rel, 'backup path')); console.log(`  ↺ restored your ${rel}`); }
     }
+    cleanupLegacy(root, found.kitDir);
     fs.rmSync(abs, { recursive: true, force: true });
     for (const d of ['.claude/skills', '.claude/agents', '.claude', '.cursor/rules', '.cursor', '.windsurf/rules', '.windsurf', '.clinerules']) {
       const p = path.join(root, d);

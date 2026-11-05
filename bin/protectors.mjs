@@ -19,6 +19,14 @@ const KIT = {
   description: 'The Protectors security kit — use for security audits, hardening, vulnerability fixes, secure coding and making code enterprise-ready',
   next: 'Next: open the project in your AI tool and say, e.g.\n  "Protect this project using The Protectors kit: analyse every file, harden it and give me the security report."',
   kept: '.protectors/ reports',
+  legacyPaths: {
+    '.claude/skills/protect': '.claude/skills/protectors',
+    '.claude/agents/finding-verifier.md': '.claude/agents/protectors-finding-verifier.md',
+    '.claude/agents/hardening-engineer.md': '.claude/agents/protectors-hardening-engineer.md',
+    '.claude/agents/recon-analyst.md': '.claude/agents/protectors-recon-analyst.md',
+    '.claude/agents/security-reviewer.md': '.claude/agents/protectors-security-reviewer.md',
+    '.claude/agents/verification-auditor.md': '.claude/agents/protectors-verification-auditor.md',
+  },
 };
 
 const [cmd = 'help', ...rest] = process.argv.slice(2);
